@@ -1,5 +1,27 @@
 import { Octokit } from "@octokit/rest";
-import { GeneratedFile } from "@/types/project";
+import { GeneratedFile, VibesitesConfig } from "@/types/project";
+
+// Cross-environment base64 encoding
+function toBase64(str: string): string {
+  if (typeof window !== "undefined") {
+    // Browser environment
+    return btoa(unescape(encodeURIComponent(str)));
+  } else {
+    // Node.js environment
+    return Buffer.from(str).toString("base64");
+  }
+}
+
+// Cross-environment base64 decoding
+function fromBase64(base64: string): string {
+  if (typeof window !== "undefined") {
+    // Browser environment
+    return decodeURIComponent(escape(atob(base64)));
+  } else {
+    // Node.js environment
+    return Buffer.from(base64, "base64").toString();
+  }
+}
 
 export async function commitFiles(
   accessToken: string,
@@ -36,7 +58,7 @@ export async function commitFiles(
       const { data } = await octokit.git.createBlob({
         owner,
         repo,
-        content: Buffer.from(file.content).toString("base64"),
+        content: toBase64(file.content),
         encoding: "base64",
       });
       return { path: file.path, sha: data.sha };
@@ -92,7 +114,9 @@ export async function getFileContent(
     });
 
     if ("content" in data) {
-      return Buffer.from(data.content, "base64").toString();
+      // GitHub returns base64 with newlines, need to remove them
+      const cleanBase64 = data.content.replace(/\n/g, "");
+      return fromBase64(cleanBase64);
     }
     return null;
   } catch {
@@ -138,6 +162,9 @@ export async function getProjectFiles(
     }
   }
 
+  // Fetch root level files first (for Opus mode: HTML/CSS/JS)
+  await fetchDirectory("");
+  // Fetch src and public directories (for Astro mode)
   await fetchDirectory("src");
   await fetchDirectory("public");
 
@@ -146,6 +173,7 @@ export async function getProjectFiles(
 
 function isRelevantFile(path: string): boolean {
   const relevantExtensions = [
+    ".html",
     ".astro",
     ".ts",
     ".tsx",
@@ -160,6 +188,70 @@ function isRelevantFile(path: string): boolean {
 }
 
 function isIgnoredDir(path: string): boolean {
-  const ignoredDirs = ["node_modules", ".git", "dist", ".astro"];
+  const ignoredDirs = ["node_modules", ".git", "dist", ".astro", ".vibesites", ".boovibe"];
   return ignoredDirs.some((dir) => path.includes(dir));
+}
+
+export async function getProjectConfig(
+  accessToken: string,
+  owner: string,
+  repo: string
+): Promise<VibesitesConfig | null> {
+  // Try new .vibesites path first
+  let content = await getFileContent(accessToken, owner, repo, ".vibesites/config.json");
+
+  // Fall back to old .boovibe path for backward compatibility
+  if (!content) {
+    content = await getFileContent(accessToken, owner, repo, ".boovibe/config.json");
+  }
+
+  if (content) {
+    try {
+      return JSON.parse(content);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+export async function saveProjectConfig(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  config: VibesitesConfig
+): Promise<void> {
+  const octokit = new Octokit({ auth: accessToken });
+  const path = ".vibesites/config.json";
+  const content = JSON.stringify(config, null, 2);
+
+  // Get the default branch first
+  const { data: repoData } = await octokit.repos.get({ owner, repo });
+  const branch = repoData.default_branch;
+
+  // Check if file exists to get its SHA
+  let sha: string | undefined;
+  try {
+    const { data } = await octokit.repos.getContent({
+      owner,
+      repo,
+      path,
+      ref: branch,
+    });
+    if ("sha" in data) {
+      sha = data.sha;
+    }
+  } catch {
+    // File doesn't exist yet
+  }
+
+  await octokit.repos.createOrUpdateFileContents({
+    owner,
+    repo,
+    path,
+    message: "Update Vibesites project settings",
+    content: toBase64(content),
+    branch,
+    sha,
+  });
 }

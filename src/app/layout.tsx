@@ -15,7 +15,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "BooVibe - AI Website Builder",
+  title: "Vibesites - AI Website Builder",
   description: "Build and deploy stunning websites with AI. Connect GitHub, chat with Claude, and deploy to Cloudflare Pages.",
 };
 

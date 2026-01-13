@@ -1,9 +1,13 @@
-export interface BooVibeConfig {
+export type BuildMode = "opus" | "astro";
+
+export interface VibesitesConfig {
   version: string;
   createdAt: string;
   name: string;
   description?: string;
   template: "landing" | "portfolio" | "blog" | "custom";
+  buildMode?: BuildMode;
+  projectContext?: string;
   deployment?: {
     cloudflareProjectName?: string;
     customDomain?: string;
@@ -23,8 +27,8 @@ export interface Project {
   htmlUrl: string;
   defaultBranch: string;
   updatedAt: string;
-  isBooVibeProject: boolean;
-  config?: BooVibeConfig;
+  isVibesitesProject: boolean;
+  config?: VibesitesConfig;
 }
 
 export interface GeneratedFile {

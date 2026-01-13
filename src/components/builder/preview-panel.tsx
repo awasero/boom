@@ -33,6 +33,7 @@ export function PreviewPanel({ files }: PreviewPanelProps) {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [viewport, setViewport] = useState<ViewportSize>("full");
   const [scale, setScale] = useState(1);
+  const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
 
   const previewHtml = useMemo(() => {
     return generatePreviewHtml(files);
@@ -45,7 +46,7 @@ export function PreviewPanel({ files }: PreviewPanelProps) {
   const currentViewport = VIEWPORT_SIZES[viewport];
 
   return (
-    <Tabs defaultValue="preview" className="h-full flex flex-col">
+    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "preview" | "code")} className="h-full flex flex-col" id="preview-panel-tabs">
       {/* Tab Header with Viewport Controls */}
       <div className="border-b border-zinc-800/50 bg-[#111113] px-4 flex items-center justify-between">
         <TabsList className="h-12 bg-transparent border-0 p-0">
@@ -120,73 +121,80 @@ export function PreviewPanel({ files }: PreviewPanelProps) {
         </div>
       </div>
 
-      <TabsContent value="preview" className="flex-1 m-0 overflow-hidden">
-        {files.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-zinc-500 bg-[#0a0a0b]">
-            <div className="relative mb-4">
-              <div className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 rounded-2xl blur-xl" />
-              <div className="relative w-16 h-16 rounded-2xl bg-zinc-800/50 border border-zinc-700/50 flex items-center justify-center">
-                <Eye className="h-7 w-7 text-zinc-600" />
-              </div>
-            </div>
-            <p className="font-medium text-zinc-400 mb-1">No preview yet</p>
-            <p className="text-sm text-zinc-600">Start chatting to generate your website</p>
-          </div>
-        ) : (
-          <div className="h-full w-full flex items-center justify-center bg-[#0a0a0b] overflow-auto p-4">
-            {viewport === "full" ? (
-              <iframe
-                srcDoc={previewHtml}
-                className="w-full h-full border-0 bg-white rounded-lg shadow-2xl shadow-black/50"
-                sandbox="allow-scripts"
-                title="Website Preview"
-              />
-            ) : (
-              <div
-                className="relative bg-zinc-900 rounded-2xl p-3 shadow-2xl shadow-black/50"
-                style={{
-                  transform: `scale(${scale})`,
-                  transformOrigin: "center center",
-                }}
-              >
-                {/* Device Frame */}
-                <div className="absolute inset-0 rounded-2xl border border-zinc-700/50 pointer-events-none" />
-
-                {/* Device Notch/Camera for mobile */}
-                {viewport === "mobile" && (
-                  <div className="absolute top-1 left-1/2 -translate-x-1/2 w-20 h-5 bg-zinc-900 rounded-b-xl flex items-center justify-center z-10">
-                    <div className="w-2 h-2 rounded-full bg-zinc-700" />
-                  </div>
-                )}
-
-                {/* Device Label */}
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs text-zinc-500 font-medium whitespace-nowrap">
-                  {currentViewport.label}
+      {/* Only render active tab content to avoid layout issues */}
+      {activeTab === "preview" && (
+        <div id="preview-tab-content" className="flex-1 overflow-hidden relative bg-[#0a0a0b]">
+          {files.length === 0 ? (
+            <div id="preview-empty-state" className="absolute inset-0 flex flex-col items-center justify-center text-zinc-500">
+              <div className="relative mb-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 rounded-2xl blur-xl" />
+                <div className="relative w-16 h-16 rounded-2xl bg-zinc-800/50 border border-zinc-700/50 flex items-center justify-center">
+                  <Eye className="h-7 w-7 text-zinc-600" />
                 </div>
-
+              </div>
+              <p className="font-medium text-zinc-400 mb-1">No preview yet</p>
+              <p className="text-sm text-zinc-600">Start chatting to generate your website</p>
+            </div>
+          ) : (
+            <div id="preview-iframe-container" className="absolute inset-0 flex items-center justify-center overflow-auto p-4">
+              {viewport === "full" ? (
                 <iframe
+                  id="preview-iframe"
                   srcDoc={previewHtml}
-                  className="bg-white rounded-lg"
-                  style={{
-                    width: currentViewport.width,
-                    height: currentViewport.height,
-                    border: "none",
-                  }}
+                  className="w-full h-full border-0 bg-white rounded-lg shadow-2xl shadow-black/50"
                   sandbox="allow-scripts"
                   title="Website Preview"
                 />
+              ) : (
+                <div
+                  id="preview-device-frame"
+                  className="relative bg-zinc-900 rounded-2xl p-3 shadow-2xl shadow-black/50"
+                  style={{
+                    transform: `scale(${scale})`,
+                    transformOrigin: "center center",
+                  }}
+                >
+                  {/* Device Frame */}
+                  <div className="absolute inset-0 rounded-2xl border border-zinc-700/50 pointer-events-none" />
 
-                {/* Device Home Indicator for mobile */}
-                {viewport === "mobile" && (
-                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-24 h-1 bg-zinc-700 rounded-full" />
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </TabsContent>
+                  {/* Device Notch/Camera for mobile */}
+                  {viewport === "mobile" && (
+                    <div className="absolute top-1 left-1/2 -translate-x-1/2 w-20 h-5 bg-zinc-900 rounded-b-xl flex items-center justify-center z-10">
+                      <div className="w-2 h-2 rounded-full bg-zinc-700" />
+                    </div>
+                  )}
 
-      <TabsContent value="code" className="flex-1 m-0 flex overflow-hidden">
+                  {/* Device Label */}
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs text-zinc-500 font-medium whitespace-nowrap">
+                    {currentViewport.label}
+                  </div>
+
+                  <iframe
+                    id="preview-iframe-device"
+                    srcDoc={previewHtml}
+                    className="bg-white rounded-lg"
+                    style={{
+                      width: currentViewport.width,
+                      height: currentViewport.height,
+                      border: "none",
+                    }}
+                    sandbox="allow-scripts"
+                    title="Website Preview"
+                  />
+
+                  {/* Device Home Indicator for mobile */}
+                  {viewport === "mobile" && (
+                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-24 h-1 bg-zinc-700 rounded-full" />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "code" && (
+        <div id="code-tab-content" className="flex-1 flex overflow-hidden relative">
         {/* File list sidebar */}
         <div className="w-52 border-r border-zinc-800/50 bg-[#0d0d0f] overflow-auto">
           <div className="p-3">
@@ -241,7 +249,8 @@ export function PreviewPanel({ files }: PreviewPanelProps) {
             </div>
           )}
         </ScrollArea>
-      </TabsContent>
+        </div>
+      )}
     </Tabs>
   );
 }
@@ -276,6 +285,40 @@ function ViewportButton({
 }
 
 function generatePreviewHtml(files: GeneratedFile[]): string {
+  // Check for plain HTML file first (Opus mode)
+  const htmlFile = files.find((f) => f.path === "index.html" || f.path.endsWith("/index.html"));
+
+  if (htmlFile) {
+    // For Opus mode: plain HTML with inline CSS/JS
+    let html = htmlFile.content;
+
+    // Find and inline CSS
+    const cssFile = files.find((f) => f.path === "styles.css" || f.path.endsWith("/styles.css"));
+    if (cssFile) {
+      html = html.replace(
+        /<link[^>]*href=["'](?:\.\/)?styles\.css["'][^>]*>/i,
+        `<style>${cssFile.content}</style>`
+      );
+    }
+
+    // Find and inline JS
+    const jsFile = files.find((f) => f.path === "script.js" || f.path.endsWith("/script.js"));
+    if (jsFile) {
+      html = html.replace(
+        /<script[^>]*src=["'](?:\.\/)?script\.js["'][^>]*><\/script>/i,
+        `<script>${jsFile.content}</script>`
+      );
+    }
+
+    // Ensure Tailwind CDN is present
+    if (!html.includes("tailwindcss.com")) {
+      html = html.replace("</head>", `<script src="https://cdn.tailwindcss.com"></script></head>`);
+    }
+
+    return html;
+  }
+
+  // Fall back to Astro mode processing
   const indexFile = files.find(
     (f) =>
       f.path.includes("pages/index") || f.path.endsWith("index.astro")

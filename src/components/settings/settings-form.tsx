@@ -15,53 +15,33 @@ import { Badge } from "@/components/ui/badge";
 import {
   getAnthropicApiKey,
   setAnthropicApiKey,
-  getCloudflareToken,
-  setCloudflareToken,
-  getCloudflareAccountId,
-  setCloudflareAccountId,
   clearAllApiKeys,
 } from "@/lib/storage";
 import { validateApiKey } from "@/lib/claude";
-import { validateCredentials } from "@/lib/cloudflare";
 import {
   Check,
   Eye,
   EyeOff,
   Key,
   Loader2,
-  Cloud,
   Trash2,
   ExternalLink,
+  Sparkles,
+  Github,
+  Rocket,
 } from "lucide-react";
 
 export function SettingsForm() {
-  const [anthropicKey, setAnthropicKey] = useState("");
-  const [cfToken, setCfToken] = useState("");
-  const [cfAccountId, setCfAccountId] = useState("");
-
+  const [anthropicKey, setAnthropicKeyState] = useState("");
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
-  const [showCfToken, setShowCfToken] = useState(false);
-
   const [anthropicValid, setAnthropicValid] = useState<boolean | null>(null);
-  const [cfValid, setCfValid] = useState<boolean | null>(null);
-
   const [savingAnthropic, setSavingAnthropic] = useState(false);
-  const [savingCf, setSavingCf] = useState(false);
 
   useEffect(() => {
-    // Load existing keys
     const existingAnthropic = getAnthropicApiKey();
-    const existingCfToken = getCloudflareToken();
-    const existingCfAccountId = getCloudflareAccountId();
-
     if (existingAnthropic) {
-      setAnthropicKey(existingAnthropic);
+      setAnthropicKeyState(existingAnthropic);
       setAnthropicValid(true);
-    }
-    if (existingCfToken) setCfToken(existingCfToken);
-    if (existingCfAccountId) setCfAccountId(existingCfAccountId);
-    if (existingCfToken && existingCfAccountId) {
-      setCfValid(true);
     }
   }, []);
 
@@ -70,7 +50,6 @@ export function SettingsForm() {
 
     setSavingAnthropic(true);
 
-    // Validate the key format
     const isValid = validateApiKey(anthropicKey.trim());
 
     if (isValid) {
@@ -83,51 +62,40 @@ export function SettingsForm() {
     setSavingAnthropic(false);
   }
 
-  async function handleSaveCloudflare() {
-    if (!cfToken.trim() || !cfAccountId.trim()) return;
-
-    setSavingCf(true);
-
-    try {
-      const isValid = await validateCredentials(cfToken.trim(), cfAccountId.trim());
-
-      if (isValid) {
-        setCloudflareToken(cfToken.trim());
-        setCloudflareAccountId(cfAccountId.trim());
-        setCfValid(true);
-      } else {
-        setCfValid(false);
-      }
-    } catch {
-      setCfValid(false);
-    }
-
-    setSavingCf(false);
-  }
-
   function handleClearAll() {
-    if (confirm("Are you sure you want to clear all API keys?")) {
+    if (confirm("Are you sure you want to clear your API key?")) {
       clearAllApiKeys();
-      setAnthropicKey("");
-      setCfToken("");
-      setCfAccountId("");
+      setAnthropicKeyState("");
       setAnthropicValid(null);
-      setCfValid(null);
     }
   }
 
   return (
     <div className="space-y-6">
       {/* Anthropic API Key */}
-      <Card>
+      <Card className="bg-[#111113] border-zinc-800/50">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Key className="h-5 w-5 text-primary" />
-              <CardTitle>Anthropic API Key</CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 flex items-center justify-center">
+                <Key className="h-5 w-5 text-violet-400" />
+              </div>
+              <div>
+                <CardTitle className="text-white">Anthropic API Key</CardTitle>
+                <CardDescription className="text-zinc-400">
+                  Powers the AI website generation
+                </CardDescription>
+              </div>
             </div>
             {anthropicValid !== null && (
-              <Badge variant={anthropicValid ? "default" : "destructive"}>
+              <Badge
+                variant={anthropicValid ? "default" : "destructive"}
+                className={
+                  anthropicValid
+                    ? "bg-green-500/20 text-green-400 border-green-500/30"
+                    : "bg-red-500/20 text-red-400 border-red-500/30"
+                }
+              >
                 {anthropicValid ? (
                   <>
                     <Check className="h-3 w-3 mr-1" />
@@ -139,13 +107,12 @@ export function SettingsForm() {
               </Badge>
             )}
           </div>
-          <CardDescription>
-            Required for AI website generation with Claude
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="anthropic-key">API Key</Label>
+            <Label htmlFor="anthropic-key" className="text-zinc-300">
+              API Key
+            </Label>
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Input
@@ -154,14 +121,15 @@ export function SettingsForm() {
                   placeholder="sk-ant-..."
                   value={anthropicKey}
                   onChange={(e) => {
-                    setAnthropicKey(e.target.value);
+                    setAnthropicKeyState(e.target.value);
                     setAnthropicValid(null);
                   }}
+                  className="bg-zinc-800/50 border-zinc-700/50 text-white placeholder:text-zinc-500 pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowAnthropicKey(!showAnthropicKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
                 >
                   {showAnthropicKey ? (
                     <EyeOff className="h-4 w-4" />
@@ -173,6 +141,7 @@ export function SettingsForm() {
               <Button
                 onClick={handleSaveAnthropic}
                 disabled={savingAnthropic || !anthropicKey.trim()}
+                className="bg-violet-500 hover:bg-violet-400 text-white"
               >
                 {savingAnthropic ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -183,13 +152,13 @@ export function SettingsForm() {
             </div>
           </div>
 
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-zinc-500">
             Get your API key from{" "}
             <a
               href="https://console.anthropic.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline inline-flex items-center gap-1"
+              className="text-violet-400 hover:text-violet-300 inline-flex items-center gap-1"
             >
               console.anthropic.com
               <ExternalLink className="h-3 w-3" />
@@ -198,127 +167,95 @@ export function SettingsForm() {
         </CardContent>
       </Card>
 
-      {/* Cloudflare Credentials */}
-      <Card>
+      {/* How It Works */}
+      <Card className="bg-zinc-800/20 border-zinc-800/50">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Cloud className="h-5 w-5 text-primary" />
-              <CardTitle>Cloudflare Pages</CardTitle>
-            </div>
-            {cfValid !== null && (
-              <Badge variant={cfValid ? "default" : "destructive"}>
-                {cfValid ? (
-                  <>
-                    <Check className="h-3 w-3 mr-1" />
-                    Connected
-                  </>
-                ) : (
-                  "Invalid"
-                )}
-              </Badge>
-            )}
-          </div>
-          <CardDescription>
-            Required for deploying your websites
-          </CardDescription>
+          <CardTitle className="text-white text-base flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-violet-400" />
+            How Vibesites Works
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cf-token">API Token</Label>
-            <div className="relative">
-              <Input
-                id="cf-token"
-                type={showCfToken ? "text" : "password"}
-                placeholder="Your Cloudflare API token"
-                value={cfToken}
-                onChange={(e) => {
-                  setCfToken(e.target.value);
-                  setCfValid(null);
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowCfToken(!showCfToken)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showCfToken ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
+          <div className="grid gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-6 w-6 rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                1
+              </div>
+              <div>
+                <p className="text-sm text-zinc-300 font-medium">AI Generation</p>
+                <p className="text-xs text-zinc-500">
+                  Your API key is used to call Claude Opus directly from your browser
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Create a token with &quot;Cloudflare Pages: Edit&quot; permission
-            </p>
+            <div className="flex items-start gap-3">
+              <div className="h-6 w-6 rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                2
+              </div>
+              <div>
+                <p className="text-sm text-zinc-300 font-medium flex items-center gap-2">
+                  <Github className="h-3.5 w-3.5" />
+                  Auto-Save to GitHub
+                </p>
+                <p className="text-xs text-zinc-500">
+                  Code is automatically committed to your repository
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="h-6 w-6 rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                3
+              </div>
+              <div>
+                <p className="text-sm text-zinc-300 font-medium flex items-center gap-2">
+                  <Rocket className="h-3.5 w-3.5" />
+                  One-Click Deploy
+                </p>
+                <p className="text-xs text-zinc-500">
+                  Deploy free to GitHub Pages — no extra accounts needed
+                </p>
+              </div>
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="space-y-2">
-            <Label htmlFor="cf-account">Account ID</Label>
-            <Input
-              id="cf-account"
-              placeholder="Your Cloudflare Account ID"
-              value={cfAccountId}
-              onChange={(e) => {
-                setCfAccountId(e.target.value);
-                setCfValid(null);
-              }}
-            />
-            <p className="text-xs text-muted-foreground">
-              Find this in your Cloudflare dashboard URL or account settings
-            </p>
+      {/* Privacy Note */}
+      <Card className="bg-zinc-800/20 border-zinc-800/50">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-3">
+            <div className="h-8 w-8 rounded-lg bg-green-500/20 flex items-center justify-center shrink-0">
+              <Check className="h-4 w-4 text-green-400" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-300 font-medium mb-1">Your Data Stays Private</p>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Your API key is stored locally in your browser and calls Anthropic directly.
+                We never see or store your key on any server.
+              </p>
+            </div>
           </div>
-
-          <Button
-            onClick={handleSaveCloudflare}
-            disabled={savingCf || !cfToken.trim() || !cfAccountId.trim()}
-            className="w-full"
-          >
-            {savingCf ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Validating...
-              </>
-            ) : (
-              "Save & Validate"
-            )}
-          </Button>
-
-          <p className="text-sm text-muted-foreground">
-            Get your credentials from{" "}
-            <a
-              href="https://dash.cloudflare.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline inline-flex items-center gap-1"
-            >
-              dash.cloudflare.com
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          </p>
         </CardContent>
       </Card>
 
       {/* Danger Zone */}
-      <Card className="border-destructive/50">
-        <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          <CardDescription>
-            These actions cannot be undone
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button
-            variant="destructive"
-            onClick={handleClearAll}
-            className="gap-2"
-          >
-            <Trash2 className="h-4 w-4" />
-            Clear All API Keys
-          </Button>
-        </CardContent>
-      </Card>
+      {anthropicValid && (
+        <Card className="border-red-500/30 bg-red-500/5">
+          <CardHeader>
+            <CardTitle className="text-red-400 text-base">Danger Zone</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              onClick={handleClearAll}
+              className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear API Key
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
