@@ -26,8 +26,8 @@ export async function generateWebsite(
   let fullContent = "";
 
   const stream = await client.messages.stream({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 8192,
+    model: "claude-opus-4-20250514",
+    max_tokens: 16384,
     system: systemPrompt,
     messages: [{ role: "user", content: userMessage }],
   });
