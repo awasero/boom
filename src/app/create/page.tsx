@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -9,7 +10,7 @@ import { BuildMode } from "@/types/project";
 
 type Step = "creating" | "success" | "error";
 
-export default function CreatePage() {
+function CreateContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -139,5 +140,41 @@ export default function CreatePage() {
         )}
       </div>
     </main>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <main className="min-h-screen bg-[#030306] text-white flex items-center justify-center">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-20 blur-[120px]"
+          style={{
+            background: "radial-gradient(circle, rgba(139,92,246,0.8) 0%, rgba(236,72,153,0.4) 50%, transparent 70%)",
+          }}
+        />
+      </div>
+      <div className="relative z-10 text-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-2xl blur-xl opacity-50 animate-pulse" />
+            <div className="relative h-20 w-20 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
+              <Sparkles className="h-10 w-10 text-white" />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold mb-2">Loading...</h1>
+          </div>
+          <Loader2 className="h-6 w-6 animate-spin text-violet-400" />
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function CreatePage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <CreateContent />
+    </Suspense>
   );
 }
