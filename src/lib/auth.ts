@@ -1,12 +1,23 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 
+// Validate required environment variables
+const githubId = process.env.GITHUB_ID;
+const githubSecret = process.env.GITHUB_SECRET;
+
+if (!githubId || !githubSecret) {
+  console.error(
+    "Missing required GitHub OAuth environment variables: GITHUB_ID and/or GITHUB_SECRET"
+  );
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
+  trustHost: true, // Required for production deployments (Vercel, etc.)
   providers: [
     GitHub({
-      clientId: process.env.GITHUB_ID,
-      clientSecret: process.env.GITHUB_SECRET,
+      clientId: githubId ?? "",
+      clientSecret: githubSecret ?? "",
       authorization: {
         params: {
           scope: "read:user user:email repo delete_repo workflow",
@@ -26,6 +37,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
   },
+  debug: process.env.NODE_ENV === "development",
 });
 
 declare module "next-auth" {
