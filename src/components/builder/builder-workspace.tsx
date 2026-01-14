@@ -149,9 +149,12 @@ function GeneratingOverlay({
               Continue to Project
             </button>
           ) : (
-            <div className="flex items-center gap-3 text-sm text-zinc-500">
-              <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
-              <span>This usually takes 30-60 seconds</span>
+            <div className="flex flex-col items-center gap-2 text-sm text-zinc-500">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
+                <span>This might take a minute or two</span>
+              </div>
+              <span className="text-zinc-600 text-xs">Feel free to leave this tab — we&apos;ll notify you when ready</span>
             </div>
           )}
         </div>
