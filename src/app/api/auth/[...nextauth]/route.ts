@@ -1,12 +1,9 @@
 import { handlers } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 
-// Wrap handlers with error handling to prevent empty 500 responses
-async function wrappedHandler(
-  req: NextRequest,
-  handler: (req: NextRequest) => Promise<Response>
-) {
+async function handleAuth(req: NextRequest, method: "GET" | "POST") {
   try {
+    const handler = method === "GET" ? handlers.GET : handlers.POST;
     return await handler(req);
   } catch (error) {
     console.error("NextAuth error:", error);
@@ -22,9 +19,9 @@ async function wrappedHandler(
 }
 
 export async function GET(req: NextRequest) {
-  return wrappedHandler(req, handlers.GET);
+  return handleAuth(req, "GET");
 }
 
 export async function POST(req: NextRequest) {
-  return wrappedHandler(req, handlers.POST);
+  return handleAuth(req, "POST");
 }
