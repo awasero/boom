@@ -16,37 +16,87 @@ export interface GenerateOptions {
   onStream?: (text: string) => void;
 }
 
-const ASTRO_SPEED_PROMPT = `
-## Astro Speed Mode Guidelines
+const PERFORMANCE_MODE_PROMPT = `
+## Performance Mode Guidelines
 
-You are in ASTRO SPEED MODE. Focus on:
-- **Performance First**: Minimal JavaScript, fast load times, small bundle sizes
-- **Simple Layouts**: Clean, functional designs without heavy animations or effects
-- **Semantic HTML**: Proper HTML structure for accessibility and SEO
-- **Minimal Dependencies**: Only essential packages, avoid complex libraries
-- **Static Generation**: Optimize for static site generation when possible
-- **Fast Rendering**: No client-side JavaScript unless absolutely necessary
+You are in PERFORMANCE MODE. Generate **plain HTML/CSS/JS files** optimized for speed.
+
+### File Format
+Output files in this exact format:
+
+FILE: index.html
+\`\`\`html
+<!DOCTYPE html>
+<html>...</html>
+\`\`\`
+
+FILE: styles.css
+\`\`\`css
+/* styles */
+\`\`\`
+
+### Technical Stack
+- **HTML5**: Semantic, accessible markup
+- **CSS**: Custom styles + Tailwind via CDN (<script src="https://cdn.tailwindcss.com"></script>)
+- **Minimal JavaScript**: Only essential JS, avoid client-side heavy logic
+
+### Performance First Approach
+Focus on:
+- **Fast Load Times**: Minimal HTTP requests, small bundle sizes
+- **No Heavy Animations**: Avoid CSS animations that cause layout shifts
+- **System Fonts**: Use system font stacks (no custom font loading)
+- **Optimized Images**: Proper sizing, lazy loading attributes
+- **Mobile First**: Design for mobile, enhance for desktop
+- **Lighthouse 95+**: Target excellent performance scores
 
 Design Philosophy:
-- Clean typography with system fonts (no custom font loading)
-- Simple color schemes with good contrast
+- Clean typography with system fonts
+- Simple, high-contrast color schemes
 - Straightforward navigation and layouts
 - Content-focused, minimal visual distractions
-- Mobile-first responsive design
-- Lighthouse score optimization (aim for 95+)
+- CSS-only interactions where possible (no JS for basic hover effects)
+- Efficient CSS using Tailwind utilities
 
 Avoid:
-- Heavy animations or transitions
+- Heavy JavaScript animations or libraries
+- Custom web fonts (use system fonts)
 - Complex interactive components
-- Large images without optimization
-- Client-side state management
-- Unnecessary CSS frameworks beyond Tailwind
+- Large unoptimized images
+- Multiple CSS/JS files when one will do
+- JavaScript for things CSS can handle
+
+### File Structure
+Keep it minimal:
+- \`index.html\` - Main page (inline critical CSS if small)
+- \`styles.css\` - Additional CSS (only if needed)
+- \`script.js\` - Only if JavaScript is truly necessary
+
+### Example Output
+
+FILE: index.html
+\`\`\`html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Site Name</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="font-sans antialiased">
+  <header>...</header>
+  <main>...</main>
+  <footer>...</footer>
+</body>
+</html>
+\`\`\`
 `;
 
-const OPUS_DESIGN_PROMPT = `
-## Opus Design Mode Guidelines
+const DESIGN_MODE_PROMPT = `
+## Design Mode Guidelines
 
-You are in OPUS DESIGN MODE. Generate **plain HTML/CSS/JS files** (NOT Astro).
+You are in DESIGN MODE. Generate **plain HTML/CSS/JS files** with exceptional visual quality.
 
 ### File Format
 Output files in this exact format:
@@ -70,8 +120,8 @@ FILE: script.js
 ### Technical Stack
 - **HTML5**: Semantic, accessible markup
 - **CSS**: Custom styles + Tailwind via CDN (<script src="https://cdn.tailwindcss.com"></script>)
-- **JavaScript**: Vanilla JS for interactions and animations
-- **NO Astro, NO .astro files, NO frontmatter**
+- **JavaScript**: Vanilla JS for rich interactions and animations
+- **Google Fonts**: Use distinctive, memorable typography
 
 ### File Structure
 Use flat structure for simplicity:
@@ -87,6 +137,7 @@ Focus on:
 - **Custom Layouts**: Creative, unique layouts that stand out
 - **Premium Feel**: High-end aesthetic with refined typography and spacing
 - **Brand Expression**: Strong visual identity and cohesive design language
+- **Distinctive Typography**: Use Google Fonts for unique character
 
 You have full creative freedom to:
 - Use advanced CSS features (grid, animations, transforms, @keyframes)
@@ -96,6 +147,7 @@ You have full creative freedom to:
 - Design custom UI components
 - Use CSS custom properties for theming
 - Add smooth page transitions
+- Use gradient meshes, patterns, and textures
 
 ### Example Output
 
@@ -108,6 +160,9 @@ FILE: index.html
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Site Name</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -146,10 +201,10 @@ export async function generateWebsite(
   let systemPrompt = SYSTEM_PROMPT;
 
   // Add build mode specific instructions
-  if (options.buildMode === "astro") {
-    systemPrompt += "\n" + ASTRO_SPEED_PROMPT;
+  if (options.buildMode === "performance") {
+    systemPrompt += "\n" + PERFORMANCE_MODE_PROMPT;
   } else {
-    systemPrompt += "\n" + OPUS_DESIGN_PROMPT;
+    systemPrompt += "\n" + DESIGN_MODE_PROMPT;
   }
 
   // Add project context if provided

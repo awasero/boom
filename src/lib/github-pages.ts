@@ -1,10 +1,9 @@
 import { Octokit } from "@octokit/rest";
 
-const GITHUB_ACTIONS_WORKFLOW = `name: Deploy to GitHub Pages
+// Static HTML workflow - manual deployment only
+const STATIC_WORKFLOW = `name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -17,36 +16,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Astro
-        run: npm run build
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
-
   deploy:
     environment:
       name: github-pages
       url: \${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
@@ -136,6 +122,23 @@ export async function enableGitHubPages(
   const octokit = new Octokit({ auth: accessToken });
 
   try {
+    // First, verify the repository exists and get default branch
+    let defaultBranch = "main";
+    try {
+      const { data: repoData } = await octokit.repos.get({ owner, repo });
+      defaultBranch = repoData.default_branch;
+    } catch (error: unknown) {
+      const err = error as { status?: number };
+      if (err.status === 404) {
+        return {
+          success: false,
+          url: "",
+          error: "Repository not found. Make sure you have access to this repository.",
+        };
+      }
+      throw error;
+    }
+
     // Step 1: Create the GitHub Actions workflow file
     const workflowPath = ".github/workflows/deploy.yml";
 
@@ -153,13 +156,51 @@ export async function enableGitHubPages(
     }
 
     if (!workflowExists) {
-      await octokit.repos.createOrUpdateFileContents({
-        owner,
-        repo,
-        path: workflowPath,
-        message: "Add GitHub Pages deployment workflow",
-        content: Buffer.from(GITHUB_ACTIONS_WORKFLOW).toString("base64"),
-      });
+      try {
+        // Create the workflow file
+        await octokit.repos.createOrUpdateFileContents({
+          owner,
+          repo,
+          path: workflowPath,
+          message: "Add GitHub Pages deployment workflow",
+          content: Buffer.from(STATIC_WORKFLOW).toString("base64"),
+          branch: defaultBranch,
+        });
+      } catch (error: unknown) {
+        console.error("Failed to create workflow file:", error);
+        const err = error as { status?: number; message?: string };
+
+        // Log the full error for debugging
+        console.error("Error details:", JSON.stringify(err, null, 2));
+
+        if (err.status === 404) {
+          return {
+            success: false,
+            url: "",
+            error: "Cannot create workflow file. Make sure the repository exists and has at least one commit.",
+          };
+        }
+        if (err.status === 422) {
+          const message = err.message || "";
+          if (message.includes("sha")) {
+            return {
+              success: false,
+              url: "",
+              error: "Workflow file already exists but was modified. Please try again.",
+            };
+          }
+          return {
+            success: false,
+            url: "",
+            error: `Cannot create workflow file: ${message}`,
+          };
+        }
+        return {
+          success: false,
+          url: "",
+          error: `Failed to create workflow: ${err.message || "Unknown error"}`,
+        };
+      }
     }
 
     // Step 2: Enable GitHub Pages with GitHub Actions as the source
@@ -190,7 +231,7 @@ export async function enableGitHubPages(
         owner,
         repo,
         workflow_id: "deploy.yml",
-        ref: "main",
+        ref: defaultBranch,
       });
     } catch {
       // Workflow might not be ready yet, that's OK - it'll run on next push
@@ -217,11 +258,15 @@ export async function triggerDeployment(
   const octokit = new Octokit({ auth: accessToken });
 
   try {
+    // Get the default branch
+    const { data: repoData } = await octokit.repos.get({ owner, repo });
+    const defaultBranch = repoData.default_branch;
+
     await octokit.actions.createWorkflowDispatch({
       owner,
       repo,
       workflow_id: "deploy.yml",
-      ref: "main",
+      ref: defaultBranch,
     });
 
     return { success: true };
@@ -263,5 +308,220 @@ export async function getWorkflowRuns(
     }));
   } catch {
     return [];
+  }
+}
+
+// GitHub Pages DNS records for custom domains
+export const GITHUB_PAGES_DNS = {
+  apex: {
+    type: "A",
+    records: [
+      "185.199.108.153",
+      "185.199.109.153",
+      "185.199.110.153",
+      "185.199.111.153",
+    ],
+  },
+  apexIPv6: {
+    type: "AAAA",
+    records: [
+      "2606:50c0:8000::153",
+      "2606:50c0:8001::153",
+      "2606:50c0:8002::153",
+      "2606:50c0:8003::153",
+    ],
+  },
+};
+
+export interface CustomDomainResult {
+  success: boolean;
+  domain?: string;
+  error?: string;
+}
+
+// Get current custom domain (reads CNAME file)
+export async function getCustomDomain(
+  accessToken: string,
+  owner: string,
+  repo: string
+): Promise<string | null> {
+  const octokit = new Octokit({ auth: accessToken });
+
+  try {
+    const { data } = await octokit.repos.getContent({
+      owner,
+      repo,
+      path: "CNAME",
+    });
+
+    if (!Array.isArray(data) && data.type === "file" && data.content) {
+      return Buffer.from(data.content, "base64").toString("utf-8").trim();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Set custom domain (creates/updates CNAME file)
+export async function setCustomDomain(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  domain: string
+): Promise<CustomDomainResult> {
+  const octokit = new Octokit({ auth: accessToken });
+
+  try {
+    // Get default branch
+    const { data: repoData } = await octokit.repos.get({ owner, repo });
+    const defaultBranch = repoData.default_branch;
+
+    // Check if CNAME already exists
+    let existingSha: string | undefined;
+    try {
+      const { data } = await octokit.repos.getContent({
+        owner,
+        repo,
+        path: "CNAME",
+      });
+      if (!Array.isArray(data) && data.type === "file") {
+        existingSha = data.sha;
+      }
+    } catch {
+      // CNAME doesn't exist
+    }
+
+    // Create or update CNAME file
+    await octokit.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path: "CNAME",
+      message: `Set custom domain to ${domain}`,
+      content: Buffer.from(domain).toString("base64"),
+      branch: defaultBranch,
+      ...(existingSha && { sha: existingSha }),
+    });
+
+    // Also update the GitHub Pages settings
+    try {
+      await octokit.repos.updateInformationAboutPagesSite({
+        owner,
+        repo,
+        cname: domain,
+      });
+    } catch {
+      // Pages might not be enabled yet, that's OK
+    }
+
+    return { success: true, domain };
+  } catch (error) {
+    console.error("Failed to set custom domain:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to set custom domain",
+    };
+  }
+}
+
+// Remove custom domain (deletes CNAME file)
+export async function removeCustomDomain(
+  accessToken: string,
+  owner: string,
+  repo: string
+): Promise<CustomDomainResult> {
+  const octokit = new Octokit({ auth: accessToken });
+
+  try {
+    // Get default branch
+    const { data: repoData } = await octokit.repos.get({ owner, repo });
+    const defaultBranch = repoData.default_branch;
+
+    // Get CNAME file SHA
+    let existingSha: string | undefined;
+    try {
+      const { data } = await octokit.repos.getContent({
+        owner,
+        repo,
+        path: "CNAME",
+      });
+      if (!Array.isArray(data) && data.type === "file") {
+        existingSha = data.sha;
+      }
+    } catch {
+      // CNAME doesn't exist, nothing to remove
+      return { success: true };
+    }
+
+    if (!existingSha) {
+      return { success: true };
+    }
+
+    // Delete CNAME file
+    await octokit.repos.deleteFile({
+      owner,
+      repo,
+      path: "CNAME",
+      message: "Remove custom domain",
+      sha: existingSha,
+      branch: defaultBranch,
+    });
+
+    // Also update the GitHub Pages settings
+    try {
+      await octokit.repos.updateInformationAboutPagesSite({
+        owner,
+        repo,
+        cname: "",
+      });
+    } catch {
+      // Ignore errors
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to remove custom domain:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to remove custom domain",
+    };
+  }
+}
+
+// Generate DNS records message for sharing
+export function generateDNSRecordsMessage(domain: string, owner: string): string {
+  const isApex = !domain.startsWith("www.");
+
+  if (isApex) {
+    return `## DNS Configuration for ${domain}
+
+Add these A records to your DNS provider:
+
+| Type | Name | Value |
+|------|------|-------|
+| A | @ | 185.199.108.153 |
+| A | @ | 185.199.109.153 |
+| A | @ | 185.199.110.153 |
+| A | @ | 185.199.111.153 |
+
+Optional IPv6 (AAAA records):
+| Type | Name | Value |
+|------|------|-------|
+| AAAA | @ | 2606:50c0:8000::153 |
+| AAAA | @ | 2606:50c0:8001::153 |
+| AAAA | @ | 2606:50c0:8002::153 |
+| AAAA | @ | 2606:50c0:8003::153 |
+
+DNS changes can take up to 48 hours to propagate.`;
+  } else {
+    return `## DNS Configuration for ${domain}
+
+Add this CNAME record to your DNS provider:
+
+| Type | Name | Value |
+|------|------|-------|
+| CNAME | www | ${owner}.github.io |
+
+DNS changes can take up to 48 hours to propagate.`;
   }
 }

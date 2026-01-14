@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createProject } from "@/lib/github";
 import { Sparkles, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { BuildMode } from "@/types/project";
 
 type Step = "creating" | "success" | "error";
 
@@ -33,6 +34,7 @@ export default function CreatePage() {
   async function createNewProject() {
     const name = searchParams.get("name") || `site-${Math.random().toString(36).substring(2, 8)}`;
     const initialPrompt = sessionStorage.getItem("vibesites_initial_prompt");
+    const buildMode = (sessionStorage.getItem("vibesites_build_mode") as BuildMode) || "design";
 
     if (!session?.accessToken) {
       setError("Not authenticated");
@@ -43,20 +45,23 @@ export default function CreatePage() {
     setProjectName(name);
 
     try {
-      // Create the project on GitHub
+      // Create the project on GitHub with selected build mode
       const project = await createProject(
         session.accessToken,
         name,
         initialPrompt?.slice(0, 100) || "Created with Vibesites",
-        "opus" // Default to Opus mode for best designs
+        buildMode
       );
 
       setStep("success");
 
+      // Clear build mode from storage (prompt and references will be handled by workspace)
+      sessionStorage.removeItem("vibesites_build_mode");
+
       // Redirect to project with auto-generate flag
       setTimeout(() => {
         if (initialPrompt) {
-          // Keep the prompt in session storage for the workspace to pick up
+          // Keep the prompt and references in session storage for the workspace to pick up
           router.push(`/project/${project.fullName}?autoGenerate=true`);
         } else {
           router.push(`/project/${project.fullName}`);

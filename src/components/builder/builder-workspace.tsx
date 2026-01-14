@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChatPanel } from "./chat-panel";
 import { PreviewPanel } from "./preview-panel";
 import { FileTree } from "./file-tree";
 import { CommitStatus } from "./commit-status";
 import { ProjectSettings } from "./project-settings";
-import { GeneratedFile, ChatMessage, VibesitesConfig } from "@/types/project";
+import { DeployPanel } from "./deploy-panel";
+import { GeneratedFile, ChatMessage, VibesitesConfig, ModelType, DesignReferences } from "@/types/project";
+import { DESIGN_PRESETS } from "./chat-panel";
 import { getProjectFiles, commitFiles, getProjectConfig, saveProjectConfig } from "@/lib/github-files";
 import { parseGeneratedFiles } from "@/lib/claude";
 import { Button } from "@/components/ui/button";
@@ -17,7 +19,6 @@ import {
   Rocket,
   Files,
   Loader2,
-  Settings,
   Sparkles,
   MessageSquare,
   PanelLeftClose,
@@ -186,11 +187,16 @@ export function BuilderWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatVisible, setChatVisible] = useState(true);
+  const [showDeployPanel, setShowDeployPanel] = useState(false);
   const [projectConfig, setProjectConfig] = useState<VibesitesConfig | null>(null);
   const [showGeneratingOverlay, setShowGeneratingOverlay] = useState(false);
   const [overlayError, setOverlayError] = useState<string | null>(null);
+  const [designUrls, setDesignUrls] = useState<string[]>([]);
+  const [designPresets, setDesignPresets] = useState<string[]>([]);
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const autoGenerateTriggered = useRef(false);
   const pendingPrompt = useRef<string | null>(null);
+  const pendingReferences = useRef<DesignReferences | null>(null);
   const loadingStarted = useRef(false);
 
   useEffect(() => {
@@ -202,12 +208,23 @@ export function BuilderWorkspace({
       try {
         console.log("Loading project:", owner, repo);
 
-        // Check for initial prompt BEFORE loading
+        // Check for initial prompt and references BEFORE loading
         if (searchParams.get("autoGenerate") === "true" && !autoGenerateTriggered.current) {
           const initialPrompt = sessionStorage.getItem("vibesites_initial_prompt");
+          const initialReferences = sessionStorage.getItem("vibesites_initial_references");
+
           if (initialPrompt) {
             pendingPrompt.current = initialPrompt;
             sessionStorage.removeItem("vibesites_initial_prompt");
+          }
+
+          if (initialReferences) {
+            try {
+              pendingReferences.current = JSON.parse(initialReferences);
+              sessionStorage.removeItem("vibesites_initial_references");
+            } catch {
+              // Invalid JSON, ignore
+            }
           }
         }
 
@@ -243,16 +260,18 @@ export function BuilderWorkspace({
     if (!loading && pendingPrompt.current && !autoGenerateTriggered.current) {
       autoGenerateTriggered.current = true;
       const prompt = pendingPrompt.current;
+      const references = pendingReferences.current;
       pendingPrompt.current = null;
+      pendingReferences.current = null;
 
       // Small delay to ensure component is fully mounted
       setTimeout(() => {
-        triggerGeneration(prompt);
+        triggerGeneration(prompt, references);
       }, 100);
     }
   }, [loading]);
 
-  async function triggerGeneration(prompt: string) {
+  async function triggerGeneration(prompt: string, references?: DesignReferences | null) {
     setShowGeneratingOverlay(true);
     setOverlayError(null);
 
@@ -268,6 +287,22 @@ export function BuilderWorkspace({
     setStreamingContent("");
     setError(null);
 
+    // Build design reference context for prompt
+    let designContext = "";
+    if (references) {
+      if (references.presets.length > 0) {
+        const presetDetails = references.presets
+          .map(id => DESIGN_PRESETS.find(p => p.id === id))
+          .filter(Boolean)
+          .map(p => `- ${p!.name}: ${p!.style}`)
+          .join("\n");
+        designContext += `\n\n## Design Style References:\n${presetDetails}`;
+      }
+      if (references.urls.length > 0) {
+        designContext += `\n\n## Reference URLs to draw inspiration from:\n${references.urls.map(u => `- ${u}`).join("\n")}`;
+      }
+    }
+
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -277,7 +312,8 @@ export function BuilderWorkspace({
           existingFiles: files,
           projectContext: projectConfig?.projectContext,
           projectName: projectConfig?.name || repo,
-          buildMode: projectConfig?.buildMode || "opus",
+          buildMode: projectConfig?.buildMode || "design",
+          designContext,
         }),
       });
 
@@ -333,6 +369,7 @@ export function BuilderWorkspace({
         content: fullContent,
         files: generatedFiles,
         timestamp: new Date(),
+        model: "opus",
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -384,12 +421,29 @@ export function BuilderWorkspace({
     setProjectConfig(updatedConfig);
   }
 
-  async function handleSendMessage(content: string) {
+  async function handleSendMessage(content: string, command?: string) {
+    // Build design reference context from workspace state
+    let designContext = "";
+    const hasReferences = designUrls.length > 0 || designPresets.length > 0;
+    if (hasReferences) {
+      if (designPresets.length > 0) {
+        const presetDetails = designPresets
+          .map(id => DESIGN_PRESETS.find(p => p.id === id))
+          .filter(Boolean)
+          .map(p => `- ${p!.name}: ${p!.style}`)
+          .join("\n");
+        designContext += `\n\n## Design Style References:\n${presetDetails}`;
+      }
+      if (designUrls.length > 0) {
+        designContext += `\n\n## Reference URLs to draw inspiration from:\n${designUrls.map(u => `- ${u}`).join("\n")}`;
+      }
+    }
+
     // Add message to chat first
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content,
+      content: command ? `/${command} ${content}` : content,
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
@@ -399,8 +453,67 @@ export function BuilderWorkspace({
     setStreamingContent("");
     setError(null);
 
+    // Determine model and endpoint
+    let model: ModelType = "opus";
+    let endpoint = "/api/generate";
+    let routingReason = "";
+
     try {
-      const response = await fetch("/api/generate", {
+      // If command is specified, use predetermined routing
+      if (command === "text") {
+        model = "haiku";
+        endpoint = "/api/quick";
+        content = `Update the text/copy: ${content}`;
+        routingReason = "Text changes";
+      } else if (command === "tweak") {
+        model = "haiku";
+        endpoint = "/api/quick";
+        content = `Make this design adjustment: ${content}`;
+        routingReason = "Quick tweak";
+      } else if (command === "seo") {
+        model = "sonnet";
+        endpoint = "/api/optimize";
+        routingReason = "SEO optimization";
+      } else if (command === "mobile") {
+        model = "opus";
+        content = `Mobile-first redesign: ${content}`;
+        routingReason = "Mobile redesign";
+      } else if (command === "design") {
+        model = "opus";
+        routingReason = "Design mode";
+      } else {
+        // Use Haiku to route the request
+        try {
+          const routeResponse = await fetch("/api/route-request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: content,
+              hasExistingFiles: files.length > 0,
+            }),
+          });
+
+          if (routeResponse.ok) {
+            const routeData = await routeResponse.json();
+            model = routeData.model as ModelType;
+            routingReason = routeData.reason || "";
+
+            // Set endpoint based on routed model
+            if (model === "sonnet") {
+              endpoint = "/api/optimize";
+            } else if (model === "haiku") {
+              endpoint = "/api/quick";
+            }
+          }
+        } catch (routeError) {
+          console.log("Router fallback to opus:", routeError);
+          // Default to opus on routing error
+        }
+      }
+
+      console.log(`Routed to ${model}: ${routingReason}`);
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -408,7 +521,9 @@ export function BuilderWorkspace({
           existingFiles: files,
           projectContext: projectConfig?.projectContext,
           projectName: projectConfig?.name || repo,
-          buildMode: projectConfig?.buildMode || "opus",
+          buildMode: projectConfig?.buildMode || "design",
+          command,
+          designContext,
         }),
       });
 
@@ -464,6 +579,9 @@ export function BuilderWorkspace({
         content: fullContent,
         files: generatedFiles,
         timestamp: new Date(),
+        model,
+        command,
+        routingReason,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -481,6 +599,7 @@ export function BuilderWorkspace({
         setFiles(updatedFiles);
         await autoCommit(generatedFiles, content);
       }
+
     } catch (err) {
       console.error("Generation failed:", err);
       setError(err instanceof Error ? err.message : "Failed to generate website");
@@ -557,12 +676,12 @@ export function BuilderWorkspace({
           <div className="flex items-center gap-2.5">
             <div className="relative">
               <div className={`absolute inset-0 rounded-lg blur opacity-50 ${
-                projectConfig?.buildMode === "astro"
+                projectConfig?.buildMode === "performance"
                   ? "bg-gradient-to-r from-emerald-500 to-teal-500"
                   : "bg-gradient-to-r from-violet-500 to-fuchsia-500"
               }`} />
               <div className={`relative h-7 w-7 rounded-lg flex items-center justify-center ${
-                projectConfig?.buildMode === "astro"
+                projectConfig?.buildMode === "performance"
                   ? "bg-gradient-to-br from-emerald-500 to-teal-500"
                   : "bg-gradient-to-br from-violet-500 to-fuchsia-500"
               }`}>
@@ -571,11 +690,11 @@ export function BuilderWorkspace({
             </div>
             <span className="font-semibold text-white tracking-tight">{repo}</span>
             <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded uppercase tracking-wider ${
-              projectConfig?.buildMode === "astro"
+              projectConfig?.buildMode === "performance"
                 ? "bg-emerald-500/20 text-emerald-400"
                 : "bg-violet-500/20 text-violet-400"
             }`}>
-              {projectConfig?.buildMode === "astro" ? "Astro Speed" : "Opus Design"}
+              {projectConfig?.buildMode === "performance" ? "Performance" : "Design"}
             </span>
           </div>
         </div>
@@ -595,6 +714,10 @@ export function BuilderWorkspace({
             config={projectConfig}
             onSave={handleSaveContext}
             projectName={repo}
+            designUrls={designUrls}
+            designPresets={designPresets}
+            onDesignUrlsChange={setDesignUrls}
+            onDesignPresetsChange={setDesignPresets}
           />
 
           <Sheet>
@@ -616,24 +739,11 @@ export function BuilderWorkspace({
           <Button
             variant="ghost"
             size="sm"
-            asChild
+            onClick={() => setShowDeployPanel(true)}
             className="text-zinc-400 hover:text-white hover:bg-zinc-800/50"
           >
-            <Link href={`/project/${owner}/${repo}/deploy`}>
-              <Rocket className="h-4 w-4 mr-1.5" />
-              Deploy
-            </Link>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-            className="text-zinc-400 hover:text-white hover:bg-zinc-800/50"
-          >
-            <Link href="/settings">
-              <Settings className="h-4 w-4" />
-            </Link>
+            <Rocket className="h-4 w-4 mr-1.5" />
+            Deploy
           </Button>
         </div>
       </header>
@@ -668,6 +778,9 @@ export function BuilderWorkspace({
               onSendMessage={handleSendMessage}
               isGenerating={isGenerating}
               streamingContent={streamingContent}
+              files={files}
+              selectedElement={selectedElement}
+              onClearSelectedElement={() => setSelectedElement(null)}
             />
           )}
         </div>
@@ -726,9 +839,24 @@ export function BuilderWorkspace({
 
         {/* Preview Panel */}
         <div id="preview-panel-container" className="flex-1 flex flex-col min-w-0 h-full bg-[#0a0a0b]">
-          <PreviewPanel files={files} />
+          <PreviewPanel
+            files={files}
+            onElementSelect={(elementInfo) => {
+              setSelectedElement(elementInfo);
+              setChatVisible(true);
+            }}
+          />
         </div>
       </div>
+
+      {/* Deploy Panel */}
+      <DeployPanel
+        owner={owner}
+        repo={repo}
+        accessToken={accessToken}
+        isOpen={showDeployPanel}
+        onClose={() => setShowDeployPanel(false)}
+      />
     </div>
   );
 }

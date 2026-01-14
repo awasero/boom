@@ -86,22 +86,34 @@ export async function getUserRepos(accessToken: string): Promise<Project[]> {
   return projects;
 }
 
+// Sanitize description for GitHub - remove control characters and limit length
+function sanitizeDescription(desc: string): string {
+  return desc
+    .replace(/[\x00-\x1F\x7F]/g, ' ') // Replace control characters with space
+    .replace(/\s+/g, ' ') // Collapse multiple spaces
+    .trim()
+    .substring(0, 100); // GitHub has a description limit
+}
+
 export async function createProject(
   accessToken: string,
   name: string,
   description: string,
-  buildMode: BuildMode = "opus"
+  buildMode: BuildMode = "design"
 ): Promise<Project> {
   const octokit = createOctokit(accessToken);
+
+  // Sanitize description for GitHub API
+  const safeDescription = sanitizeDescription(description);
 
   // Create the repository
   let repo;
   try {
     const { data } = await octokit.repos.createForAuthenticatedUser({
       name,
-      description,
+      description: safeDescription,
       auto_init: true,
-      private: false,
+      private: true,
     });
     repo = data;
   } catch (error: unknown) {
@@ -133,10 +145,8 @@ export async function createProject(
     content: toBase64(JSON.stringify(config, null, 2)),
   });
 
-  // Create project structure based on build mode
-  const templateFiles = buildMode === "opus"
-    ? getOpusTemplateFiles(name, description)
-    : getAstroTemplateFiles(name, description);
+  // Create project structure (HTML/CSS/JS for both modes)
+  const templateFiles = getTemplateFiles(name, description);
 
   for (const file of templateFiles) {
     await octokit.repos.createOrUpdateFileContents({
@@ -161,7 +171,7 @@ export async function createProject(
   };
 }
 
-function getOpusTemplateFiles(
+function getTemplateFiles(
   name: string,
   description: string
 ): { path: string; content: string }[] {
@@ -213,129 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
   <circle cx="64" cy="64" r="60" fill="#6366f1"/>
   <text x="64" y="80" text-anchor="middle" fill="white" font-size="48" font-family="system-ui">V</text>
 </svg>`,
-    },
-  ];
-}
-
-function getAstroTemplateFiles(
-  name: string,
-  description: string
-): { path: string; content: string }[] {
-  return [
-    {
-      path: "package.json",
-      content: JSON.stringify(
-        {
-          name: name.toLowerCase().replace(/\s+/g, "-"),
-          type: "module",
-          version: "0.0.1",
-          scripts: {
-            dev: "astro dev",
-            start: "astro dev",
-            build: "astro build",
-            preview: "astro preview",
-            astro: "astro",
-          },
-          dependencies: {
-            astro: "^4.0.0",
-            "@astrojs/tailwind": "^5.0.0",
-            tailwindcss: "^3.4.0",
-          },
-        },
-        null,
-        2
-      ),
-    },
-    {
-      path: "astro.config.mjs",
-      content: `import { defineConfig } from 'astro/config';
-import tailwind from '@astrojs/tailwind';
-
-export default defineConfig({
-  integrations: [tailwind()],
-  output: 'static',
-});
-`,
-    },
-    {
-      path: "tailwind.config.mjs",
-      content: `/** @type {import('tailwindcss').Config} */
-export default {
-  content: ['./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}'],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-};
-`,
-    },
-    {
-      path: "tsconfig.json",
-      content: JSON.stringify(
-        {
-          extends: "astro/tsconfigs/strict",
-          compilerOptions: {
-            baseUrl: ".",
-            paths: {
-              "@/*": ["src/*"],
-            },
-          },
-        },
-        null,
-        2
-      ),
-    },
-    {
-      path: "src/layouts/Layout.astro",
-      content: `---
-interface Props {
-  title: string;
-  description?: string;
-}
-
-const { title, description = "${description || "Built with Vibesites"}" } = Astro.props;
----
-
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content={description} />
-    <meta name="generator" content={Astro.generator} />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{title}</title>
-  </head>
-  <body class="min-h-screen bg-white text-gray-900 antialiased">
-    <slot />
-  </body>
-</html>
-`,
-    },
-    {
-      path: "src/pages/index.astro",
-      content: `---
-import Layout from '../layouts/Layout.astro';
----
-
-<Layout title="${name}">
-  <main class="flex min-h-screen flex-col items-center justify-center p-8">
-    <h1 class="text-4xl font-bold mb-4">${name}</h1>
-    <p class="text-xl text-gray-600 mb-8">${description || "Welcome to your new website"}</p>
-    <p class="text-sm text-gray-400">
-      Start chatting in Vibesites to build your site
-    </p>
-  </main>
-</Layout>
-`,
-    },
-    {
-      path: "public/favicon.svg",
-      content: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 128 128">
-  <circle cx="64" cy="64" r="60" fill="#6366f1"/>
-  <text x="64" y="80" text-anchor="middle" fill="white" font-size="48" font-family="system-ui">B</text>
-</svg>
-`,
     },
   ];
 }

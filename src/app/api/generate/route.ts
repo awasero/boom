@@ -3,59 +3,79 @@ import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@/lib/auth";
 import { SYSTEM_PROMPT } from "@/lib/prompts/system";
 
-const OPUS_DESIGN_PROMPT = `
-## Opus Design Mode Guidelines
+const PERFORMANCE_MODE_PROMPT = `
+## Performance Mode Guidelines
 
-You are in OPUS DESIGN MODE. Generate **plain HTML/CSS/JS files** (NOT Astro).
-
-### File Format
-Output files in this exact format:
-
-FILE: index.html
-\`\`\`html
-<!DOCTYPE html>
-<html>...</html>
-\`\`\`
-
-FILE: styles.css
-\`\`\`css
-/* styles */
-\`\`\`
-
-FILE: script.js
-\`\`\`javascript
-// scripts
-\`\`\`
+You are in PERFORMANCE MODE. Generate **plain HTML/CSS/JS files** optimized for speed while still looking good.
 
 ### Technical Stack
 - **HTML5**: Semantic, accessible markup
-- **CSS**: Custom styles + Tailwind via CDN (<script src="https://cdn.tailwindcss.com"></script>)
-- **JavaScript**: Vanilla JS for interactions and animations
-- **NO Astro, NO .astro files, NO frontmatter**
+- **Tailwind CSS**: Via CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`)
+- **Minimal JavaScript**: Only essential JS for core interactions
 
-### File Structure
-Use flat structure for simplicity:
-- \`index.html\` - Main page
-- \`about.html\`, \`contact.html\` - Additional pages
-- \`styles.css\` - Custom CSS (beyond Tailwind)
-- \`script.js\` - JavaScript for interactions
-
-### Design Philosophy
+### Performance First Approach
 Focus on:
-- **Visual Excellence**: Beautiful, memorable designs with attention to detail
-- **Rich Interactions**: Smooth animations, hover effects, and micro-interactions
-- **Custom Layouts**: Creative, unique layouts that stand out
-- **Premium Feel**: High-end aesthetic with refined typography and spacing
-- **Brand Expression**: Strong visual identity and cohesive design language
+- **Fast Load Times**: Minimal HTTP requests, small bundle sizes
+- **CSS-Only Animations**: Subtle transitions that don't cause layout shifts
+- **System Fonts**: Use optimized system font stack for speed
+- **Optimized Images**: Proper sizing, lazy loading attributes
+- **Mobile First**: Design for mobile, enhance for desktop
+- **Lighthouse 95+**: Target excellent performance scores
 
-You have full creative freedom to:
-- Use advanced CSS features (grid, animations, transforms, @keyframes)
-- Create complex multi-section layouts
-- Add sophisticated hover states and interactions
-- Implement scroll-triggered animations with IntersectionObserver
-- Design custom UI components
-- Use CSS custom properties for theming
-- Add smooth page transitions
+### Still Look Good
+Even in performance mode, avoid generic designs:
+- Use Tailwind's color palette creatively (not just blue-500)
+- Add subtle shadows and borders for depth
+- Use interesting layouts (not just centered stacking)
+- Include hover states for interactivity
+- Apply proper spacing and visual hierarchy
+
+Avoid:
+- Heavy JavaScript animations or libraries
+- Multiple custom web fonts (one font max if needed)
+- Complex interactive components
+- Multiple CSS/JS files when one will do
+`;
+
+const DESIGN_MODE_PROMPT = `
+## Design Mode Guidelines
+
+You are in DESIGN MODE. Generate **visually stunning HTML/CSS/JS** following the Design Reference Guide.
+
+### Key Requirements
+1. **Choose ONE accent color** from the palette (Blue, Purple, Green, Orange, or Cyan)
+2. **Follow the type hierarchy**: H1 40-48px, H2 32-36px, H3 24-28px, Body 14-16px
+3. **Use 8px spacing increments** consistently (p-2, p-3, p-4, p-6, p-8)
+4. **Import Google Fonts**: Use Inter, Geist, DM Sans, or Playfair Display
+
+### Design Aesthetic Options
+Reference one of these styles:
+- **Clerk-style**: Modern, spacious, purple accent (#6C5CE7), geometric patterns
+- **Resend-style**: Dark-first, sophisticated typography, blue accent (#00A3FF)
+- **SavvyCal-style**: Vibrant green (#00AA55), friendly, conversational
+- **Tiptap-style**: Vibrant gradient, cyan-purple-coral, bold serif
+- **Wander-style**: Luxury, premium, photography-driven
+
+### Animation Requirements
+- Duration: 150-300ms for micro-interactions
+- Hover effects: Scale (1.02-1.05), shadow increase, color shift
+- Page load: Staggered fade-in with animation-delay
+- Use CSS @keyframes for custom animations
+
+### Component Standards
+- **Buttons**: Solid accent color, rounded (8-12px), hover scale + shadow
+- **Cards**: Subtle border (#E5E7EB), 8-12px radius, 20-24px padding
+- **Navbar**: 56-64px height, sticky, backdrop-blur
+
+### Required Patterns
+Every design MUST include:
+1. Hero section with bold headline + CTA
+2. Feature grid (3-4 columns)
+3. Testimonials or social proof
+4. CTA footer section
+5. Responsive mobile layout
+
+Be bold, be distinctive, but follow the design system consistently.
 `;
 
 export async function POST(request: NextRequest) {
@@ -75,7 +95,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { prompt, existingFiles, projectContext, projectName, buildMode } =
+    const { prompt, existingFiles, projectContext, projectName, buildMode, designContext } =
       await request.json();
 
     const client = new Anthropic({ apiKey });
@@ -83,8 +103,10 @@ export async function POST(request: NextRequest) {
     let systemPrompt = SYSTEM_PROMPT;
 
     // Add build mode specific instructions
-    if (buildMode === "opus" || !buildMode) {
-      systemPrompt += "\n" + OPUS_DESIGN_PROMPT;
+    if (buildMode === "performance") {
+      systemPrompt += "\n" + PERFORMANCE_MODE_PROMPT;
+    } else {
+      systemPrompt += "\n" + DESIGN_MODE_PROMPT;
     }
 
     // Add project context if provided
@@ -98,6 +120,12 @@ export async function POST(request: NextRequest) {
       }
       systemPrompt +=
         "\nUse this context to inform your design decisions, content, and branding.\n";
+    }
+
+    // Add design references if provided
+    if (designContext) {
+      systemPrompt += designContext;
+      systemPrompt += "\n\nApply these design references to create a cohesive, distinctive design that reflects the selected styles.\n";
     }
 
     if (existingFiles && existingFiles.length > 0) {

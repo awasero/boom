@@ -142,7 +142,7 @@ export function DeploymentManager({
   return (
     <div className="min-h-screen bg-[#0a0a0b]">
       {/* Header */}
-      <header className="h-14 border-b border-zinc-800/50 bg-[#0a0a0b]/80 backdrop-blur-xl flex items-center justify-between px-4">
+      <header className="sticky top-0 z-50 h-14 border-b border-zinc-800/50 bg-[#0a0a0b]/80 backdrop-blur-xl flex items-center justify-between px-4">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -183,8 +183,8 @@ export function DeploymentManager({
 
         {!deploymentStatus?.enabled ? (
           /* Not yet deployed */
-          <Card className="bg-[#111113] border-zinc-800/50 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-fuchsia-500/5" />
+          <Card className="bg-[#111113] border-zinc-800/50 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-fuchsia-500/5 pointer-events-none" />
             <CardHeader className="relative text-center pb-2">
               <div className="mx-auto mb-4 relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-2xl blur-xl opacity-30" />

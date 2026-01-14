@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { GeneratedFile } from "@/types/project";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,10 +14,12 @@ import {
   Monitor,
   Maximize2,
   RotateCcw,
+  MousePointer2,
 } from "lucide-react";
 
 interface PreviewPanelProps {
   files: GeneratedFile[];
+  onElementSelect?: (elementInfo: string) => void;
 }
 
 type ViewportSize = "mobile" | "tablet" | "desktop" | "full";
@@ -29,15 +31,47 @@ const VIEWPORT_SIZES: Record<ViewportSize, { width: number; height: number; labe
   full: { width: 0, height: 0, label: "Responsive" },
 };
 
-export function PreviewPanel({ files }: PreviewPanelProps) {
+export function PreviewPanel({ files, onElementSelect }: PreviewPanelProps) {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [viewport, setViewport] = useState<ViewportSize>("full");
   const [scale, setScale] = useState(1);
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
+  const [currentPage, setCurrentPage] = useState<string>("index.html");
+  const [inspectMode, setInspectMode] = useState(false);
+
+  // Get all HTML pages for navigation
+  const htmlPages = useMemo(() => {
+    return files.filter(f => f.path.endsWith('.html')).map(f => f.path);
+  }, [files]);
 
   const previewHtml = useMemo(() => {
-    return generatePreviewHtml(files);
-  }, [files]);
+    return generatePreviewHtml(files, currentPage, inspectMode);
+  }, [files, currentPage, inspectMode]);
+
+  // Listen for navigation and element selection messages from iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'navigate' && event.data?.page) {
+        const page = event.data.page;
+        // Check if the page exists in our files
+        const pageFile = files.find(f =>
+          f.path === page ||
+          f.path === page.replace('./', '') ||
+          f.path.endsWith(page)
+        );
+        if (pageFile) {
+          setCurrentPage(pageFile.path);
+        }
+      }
+      // Handle element selection from inspect mode
+      if (event.data?.type === 'elementSelected' && event.data?.info) {
+        onElementSelect?.(event.data.info);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [files, onElementSelect]);
 
   const displayFile = selectedFile
     ? files.find((f) => f.path === selectedFile)
@@ -66,8 +100,47 @@ export function PreviewPanel({ files }: PreviewPanelProps) {
           </TabsTrigger>
         </TabsList>
 
+        {/* Page Navigation - show if multiple HTML pages */}
+        {htmlPages.length > 1 && (
+          <div className="flex items-center gap-1 bg-zinc-800/30 rounded-lg p-1">
+            {htmlPages.map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`
+                  px-2.5 py-1 text-xs font-medium rounded-md transition-all
+                  ${currentPage === page
+                    ? "bg-violet-500/20 text-violet-400"
+                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700/50"
+                  }
+                `}
+              >
+                {page.replace('.html', '')}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Viewport Controls */}
         <div className="flex items-center gap-1">
+          {/* Inspect Mode Toggle */}
+          <button
+            onClick={() => setInspectMode(!inspectMode)}
+            className={`
+              p-2 rounded-lg transition-all flex items-center gap-1.5
+              ${inspectMode
+                ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30"
+                : "bg-zinc-800/50 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-700/50"
+              }
+            `}
+            title="Inspect mode - hover to see elements, double-click to copy to chat"
+          >
+            <MousePointer2 className="h-4 w-4" />
+            {inspectMode && <span className="text-xs font-medium">Inspect</span>}
+          </button>
+
+          <div className="h-5 w-px bg-zinc-700 mx-1" />
+
           <div className="flex items-center bg-zinc-800/50 rounded-lg p-1 gap-0.5">
             <ViewportButton
               icon={<Smartphone className="h-4 w-4" />}
@@ -284,9 +357,145 @@ function ViewportButton({
   );
 }
 
-function generatePreviewHtml(files: GeneratedFile[]): string {
-  // Check for plain HTML file first (Opus mode)
-  const htmlFile = files.find((f) => f.path === "index.html" || f.path.endsWith("/index.html"));
+function generatePreviewHtml(files: GeneratedFile[], currentPage: string = "index.html", inspectMode: boolean = false): string {
+  // Navigation interceptor script - prevents links from navigating parent window
+  const navigationScript = `
+    <script>
+      document.addEventListener('click', function(e) {
+        const link = e.target.closest('a');
+        if (link) {
+          const href = link.getAttribute('href');
+          if (href && !href.startsWith('http') && !href.startsWith('#') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
+            e.preventDefault();
+            // Send message to parent to change page
+            window.parent.postMessage({ type: 'navigate', page: href }, '*');
+          }
+        }
+      }, true);
+    </script>
+  `;
+
+  // Element inspection script for inspect mode
+  const inspectionScript = inspectMode ? `
+    <style>
+      .vibesites-inspect-highlight {
+        outline: 2px solid #10b981 !important;
+        outline-offset: 2px !important;
+        cursor: crosshair !important;
+      }
+      .vibesites-inspect-tooltip {
+        position: fixed;
+        background: #18181b;
+        color: #e4e4e7;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-family: ui-monospace, monospace;
+        z-index: 999999;
+        pointer-events: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        border: 1px solid #3f3f46;
+        max-width: 300px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .vibesites-inspect-tooltip .tag { color: #a78bfa; }
+      .vibesites-inspect-tooltip .id { color: #34d399; }
+      .vibesites-inspect-tooltip .class { color: #60a5fa; }
+      .vibesites-inspect-tooltip .hint { color: #71717a; font-size: 10px; display: block; margin-top: 4px; }
+    </style>
+    <script>
+      (function() {
+        let tooltip = null;
+        let currentEl = null;
+
+        function createTooltip() {
+          tooltip = document.createElement('div');
+          tooltip.className = 'vibesites-inspect-tooltip';
+          document.body.appendChild(tooltip);
+        }
+
+        function getElementInfo(el) {
+          const tag = el.tagName.toLowerCase();
+          const id = el.id ? '#' + el.id : '';
+          const classes = el.className && typeof el.className === 'string'
+            ? '.' + el.className.split(' ').filter(c => c && !c.startsWith('vibesites-')).join('.')
+            : '';
+          return { tag, id, classes };
+        }
+
+        function formatTooltip(info) {
+          let html = '<span class="tag">' + info.tag + '</span>';
+          if (info.id) html += '<span class="id">' + info.id + '</span>';
+          if (info.classes) html += '<span class="class">' + info.classes + '</span>';
+          html += '<span class="hint">Double-click to select</span>';
+          return html;
+        }
+
+        function getSelector(el) {
+          const info = getElementInfo(el);
+          if (info.id) return info.tag + info.id;
+          if (info.classes) return info.tag + info.classes;
+          return info.tag;
+        }
+
+        document.addEventListener('mouseover', function(e) {
+          const el = e.target;
+          if (el === document.body || el === document.documentElement) return;
+          if (el.className && typeof el.className === 'string' && el.className.includes('vibesites-')) return;
+
+          if (currentEl) currentEl.classList.remove('vibesites-inspect-highlight');
+          currentEl = el;
+          el.classList.add('vibesites-inspect-highlight');
+
+          if (!tooltip) createTooltip();
+          tooltip.innerHTML = formatTooltip(getElementInfo(el));
+          tooltip.style.display = 'block';
+        });
+
+        document.addEventListener('mousemove', function(e) {
+          if (tooltip) {
+            const x = Math.min(e.clientX + 12, window.innerWidth - tooltip.offsetWidth - 10);
+            const y = Math.min(e.clientY + 12, window.innerHeight - tooltip.offsetHeight - 10);
+            tooltip.style.left = x + 'px';
+            tooltip.style.top = y + 'px';
+          }
+        });
+
+        document.addEventListener('mouseout', function(e) {
+          if (currentEl && !currentEl.contains(e.relatedTarget)) {
+            currentEl.classList.remove('vibesites-inspect-highlight');
+            currentEl = null;
+            if (tooltip) tooltip.style.display = 'none';
+          }
+        });
+
+        document.addEventListener('dblclick', function(e) {
+          if (currentEl) {
+            e.preventDefault();
+            e.stopPropagation();
+            const selector = getSelector(currentEl);
+            window.parent.postMessage({ type: 'elementSelected', info: selector }, '*');
+          }
+        });
+
+        // Prevent normal clicks in inspect mode
+        document.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }, true);
+      })();
+    </script>
+  ` : '';
+
+  // Check for the current page file first
+  let htmlFile = files.find((f) => f.path === currentPage);
+
+  // Fall back to index.html if current page not found
+  if (!htmlFile) {
+    htmlFile = files.find((f) => f.path === "index.html" || f.path.endsWith("/index.html"));
+  }
 
   if (htmlFile) {
     // For Opus mode: plain HTML with inline CSS/JS
@@ -314,6 +523,9 @@ function generatePreviewHtml(files: GeneratedFile[]): string {
     if (!html.includes("tailwindcss.com")) {
       html = html.replace("</head>", `<script src="https://cdn.tailwindcss.com"></script></head>`);
     }
+
+    // Add navigation interceptor and inspection script before closing body
+    html = html.replace("</body>", `${inspectMode ? inspectionScript : navigationScript}</body>`);
 
     return html;
   }
@@ -379,6 +591,24 @@ function generatePreviewHtml(files: GeneratedFile[]): string {
 
   const tailwindScript = `<script src="https://cdn.tailwindcss.com"></script>`;
 
+  const navScript = `
+    <script>
+      document.addEventListener('click', function(e) {
+        const link = e.target.closest('a');
+        if (link) {
+          const href = link.getAttribute('href');
+          if (href && !href.startsWith('http') && !href.startsWith('#') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
+            e.preventDefault();
+            window.parent.postMessage({ type: 'navigate', page: href }, '*');
+          }
+        }
+      }, true);
+    </script>
+  `;
+
+  // Use inspection script when in inspect mode, otherwise use nav script
+  const scriptToInject = inspectMode ? inspectionScript : navScript;
+
   if (!html.includes("<!DOCTYPE html>") && !html.includes("<html")) {
     html = `
       <!DOCTYPE html>
@@ -390,11 +620,13 @@ function generatePreviewHtml(files: GeneratedFile[]): string {
         </head>
         <body>
           ${html}
+          ${scriptToInject}
         </body>
       </html>
     `;
   } else {
     html = html.replace("</head>", `${tailwindScript}</head>`);
+    html = html.replace("</body>", `${scriptToInject}</body>`);
   }
 
   return html;
