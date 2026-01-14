@@ -20,10 +20,10 @@ import {
   Rocket,
   Files,
   Loader2,
-  Sparkles,
   MessageSquare,
   PanelLeftClose,
   PanelLeft,
+  Terminal,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -46,7 +46,7 @@ function GeneratingOverlay({
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-20 blur-[100px]"
           style={{ background: error
             ? "radial-gradient(circle, rgba(239,68,68,0.8) 0%, rgba(236,72,153,0.4) 50%, transparent 70%)"
-            : "radial-gradient(circle, rgba(139,92,246,0.8) 0%, rgba(236,72,153,0.4) 50%, transparent 70%)"
+            : "radial-gradient(circle, rgba(6,182,212,0.6) 0%, rgba(139,92,246,0.4) 50%, transparent 70%)"
           }}
         />
       </div>
@@ -57,24 +57,24 @@ function GeneratingOverlay({
           {error ? (
             <>
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-pink-500 mb-4">
-                <Sparkles className="h-8 w-8 text-white" />
+                <Terminal className="h-8 w-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-white mb-2">Generation Failed</h2>
               <p className="text-red-400">{error}</p>
             </>
           ) : (
             <>
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 mb-4">
-                <Sparkles className="h-8 w-8 text-white animate-pulse" />
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-violet-500 mb-4">
+                <Terminal className="h-8 w-8 text-white animate-pulse" />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">Building your website</h2>
+              <h2 className="text-2xl font-bold text-white mb-2 font-mono">Building your website</h2>
               <p className="text-zinc-400">Claude is writing code for you...</p>
             </>
           )}
         </div>
 
         {/* Code preview window */}
-        <div className="relative bg-[#0a0a0f] rounded-2xl border border-white/10 overflow-hidden shadow-2xl shadow-violet-500/10">
+        <div className="relative bg-[#0a0a0f] rounded-2xl border border-white/10 overflow-hidden shadow-2xl shadow-cyan-500/10">
           {/* Window header */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5 bg-white/[0.02]">
             <div className="flex gap-1.5">
@@ -695,21 +695,21 @@ export function BuilderWorkspace({
               <div className={`absolute inset-0 rounded-lg blur opacity-50 ${
                 projectConfig?.buildMode === "performance"
                   ? "bg-gradient-to-r from-emerald-500 to-teal-500"
-                  : "bg-gradient-to-r from-violet-500 to-fuchsia-500"
+                  : "bg-gradient-to-r from-cyan-500 to-violet-500"
               }`} />
               <div className={`relative h-7 w-7 rounded-lg flex items-center justify-center ${
                 projectConfig?.buildMode === "performance"
                   ? "bg-gradient-to-br from-emerald-500 to-teal-500"
-                  : "bg-gradient-to-br from-violet-500 to-fuchsia-500"
+                  : "bg-gradient-to-br from-cyan-500 to-violet-600"
               }`}>
-                <Sparkles className="h-4 w-4 text-white" />
+                <Terminal className="h-3.5 w-3.5 text-white" />
               </div>
             </div>
-            <span className="font-semibold text-white tracking-tight">{repo}</span>
+            <span className="font-semibold text-white tracking-tight font-mono">{repo}</span>
             <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded uppercase tracking-wider ${
               projectConfig?.buildMode === "performance"
                 ? "bg-emerald-500/20 text-emerald-400"
-                : "bg-violet-500/20 text-violet-400"
+                : "bg-cyan-500/20 text-cyan-400"
             }`}>
               {projectConfig?.buildMode === "performance" ? "Performance" : "Design"}
             </span>

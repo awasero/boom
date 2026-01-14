@@ -405,12 +405,12 @@ function EmptyState({
     return (
       <div className="h-full flex flex-col items-center justify-center text-center px-6">
         <div className="relative mb-6">
-          <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-2xl blur-xl opacity-30 animate-pulse" />
-          <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 flex items-center justify-center">
-            <Sparkles className="h-8 w-8 text-violet-400" />
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-violet-500 rounded-2xl blur-xl opacity-30 animate-pulse" />
+          <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 flex items-center justify-center">
+            <Sparkles className="h-8 w-8 text-cyan-400" />
           </div>
         </div>
-        <h2 className="text-lg font-semibold text-white mb-2">
+        <h2 className="text-lg font-semibold text-white mb-2 font-mono">
           Let&apos;s build something
         </h2>
         <p className="text-zinc-500 text-sm max-w-xs leading-relaxed">
@@ -425,12 +425,12 @@ function EmptyState({
     <div className="h-full flex flex-col px-4 py-6 overflow-y-auto">
       <div className="text-center mb-6">
         <div className="relative inline-block mb-4">
-          <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-2xl blur-xl opacity-20" />
-          <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 flex items-center justify-center">
-            <Wand2 className="h-7 w-7 text-violet-400" />
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-violet-500 rounded-2xl blur-xl opacity-20" />
+          <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 flex items-center justify-center">
+            <Wand2 className="h-7 w-7 text-cyan-400" />
           </div>
         </div>
-        <h2 className="text-lg font-semibold text-white mb-1">
+        <h2 className="text-lg font-semibold text-white mb-1 font-mono">
           What would you like to change?
         </h2>
         <p className="text-zinc-500 text-sm">

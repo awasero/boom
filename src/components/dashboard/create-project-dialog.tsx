@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Loader2,
   Plus,
-  Sparkles,
+  Terminal,
   Zap,
   Palette,
   Check,
@@ -200,7 +200,7 @@ export function CreateProjectDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 text-white shadow-lg shadow-violet-500/20">
+        <Button className="gap-2 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white shadow-lg shadow-cyan-500/20">
           <Plus className="h-4 w-4" />
           New Project
         </Button>
@@ -208,11 +208,11 @@ export function CreateProjectDialog() {
       <DialogContent className="bg-[#111113] border-zinc-800/50 max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-violet-400" />
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 flex items-center justify-center">
+              <Terminal className="h-5 w-5 text-cyan-400" />
             </div>
             <div>
-              <DialogTitle className="text-white">Create new website</DialogTitle>
+              <DialogTitle className="text-white font-mono">Create new website</DialogTitle>
               <DialogDescription className="text-zinc-400">
                 Describe what you want and we&apos;ll build it.
               </DialogDescription>
@@ -230,7 +230,7 @@ export function CreateProjectDialog() {
                 placeholder="Describe your dream website..."
                 rows={4}
                 disabled={loading}
-                className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-700/50 rounded-xl text-white placeholder:text-zinc-500 focus:border-violet-500/50 focus:ring-violet-500/20 focus:outline-none resize-none"
+                className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-700/50 rounded-xl text-white placeholder:text-zinc-500 focus:border-cyan-500/50 focus:ring-cyan-500/20 focus:outline-none resize-none font-mono"
               />
             </div>
 
@@ -387,21 +387,21 @@ export function CreateProjectDialog() {
                 className={`
                   relative p-4 rounded-xl border-2 text-left transition-all
                   ${buildMode === "design"
-                    ? "border-violet-500 bg-violet-500/10"
+                    ? "border-cyan-500 bg-cyan-500/10"
                     : "border-zinc-700/50 bg-zinc-900/30 hover:border-zinc-600"
                   }
                 `}
               >
                 {buildMode === "design" && (
                   <div className="absolute top-2 right-2">
-                    <Check className="h-4 w-4 text-violet-400" />
+                    <Check className="h-4 w-4 text-cyan-400" />
                   </div>
                 )}
                 <div className="flex items-center gap-2 mb-2">
-                  <div className={`p-1.5 rounded-lg ${buildMode === "design" ? "bg-violet-500/20" : "bg-zinc-800"}`}>
-                    <Palette className={`h-4 w-4 ${buildMode === "design" ? "text-violet-400" : "text-zinc-400"}`} />
+                  <div className={`p-1.5 rounded-lg ${buildMode === "design" ? "bg-cyan-500/20" : "bg-zinc-800"}`}>
+                    <Palette className={`h-4 w-4 ${buildMode === "design" ? "text-cyan-400" : "text-zinc-400"}`} />
                   </div>
-                  <span className={`font-semibold ${buildMode === "design" ? "text-violet-300" : "text-zinc-300"}`}>
+                  <span className={`font-semibold ${buildMode === "design" ? "text-cyan-300" : "text-zinc-300"}`}>
                     Good Design
                   </span>
                 </div>
@@ -458,7 +458,7 @@ export function CreateProjectDialog() {
           <Button
             onClick={handleCreate}
             disabled={loading || !prompt.trim()}
-            className="gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 text-white"
+            className="gap-2 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white"
           >
             {loading ? (
               <>
