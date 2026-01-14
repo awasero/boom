@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { ChatMessage, ModelType, ChatCommand, DesignPreset, GeneratedFile } from "@/types/project";
+import { getAnthropicApiKey } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -373,14 +374,15 @@ function EmptyState({
   useEffect(() => {
     // Only fetch if we have files and haven't loaded yet
     const htmlFiles = files.filter(f => f.path.match(/\.(html|astro|css)$/));
-    if (hasFiles && htmlFiles.length > 0 && !suggestionsLoaded.current) {
+    const apiKey = getAnthropicApiKey();
+    if (hasFiles && htmlFiles.length > 0 && !suggestionsLoaded.current && apiKey) {
       suggestionsLoaded.current = true;
       setLoadingSuggestions(true);
 
       fetch("/api/suggestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ existingFiles: files }),
+        body: JSON.stringify({ existingFiles: files, apiKey }),
       })
         .then(res => {
           if (!res.ok) throw new Error("API error");

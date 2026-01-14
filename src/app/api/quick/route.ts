@@ -36,17 +36,18 @@ export async function POST(request: NextRequest) {
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "API key not configured" },
-      { status: 500 }
-    );
-  }
-
   try {
-    const { prompt, existingFiles, projectName } = await request.json();
+    const { prompt, existingFiles, projectName, apiKey: userApiKey } = await request.json();
 
-    const client = new Anthropic({ apiKey });
+    const effectiveApiKey = userApiKey || apiKey;
+    if (!effectiveApiKey) {
+      return NextResponse.json(
+        { error: "API key required. Please add your Anthropic API key in Settings." },
+        { status: 400 }
+      );
+    }
+
+    const client = new Anthropic({ apiKey: effectiveApiKey });
 
     let systemPrompt = QUICK_ASSISTANT_PROMPT;
 

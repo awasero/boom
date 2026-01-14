@@ -64,15 +64,8 @@ export async function POST(request: NextRequest) {
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "API key not configured" },
-      { status: 500 }
-    );
-  }
-
   try {
-    const { prompt, hasExistingFiles } = await request.json();
+    const { prompt, hasExistingFiles, apiKey: userApiKey } = await request.json();
 
     // If no existing files and it's a creation request, default to opus
     if (!hasExistingFiles) {
@@ -82,7 +75,16 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const client = new Anthropic({ apiKey });
+    const effectiveApiKey = userApiKey || apiKey;
+    if (!effectiveApiKey) {
+      // Default to opus if no API key
+      return NextResponse.json({
+        model: "opus",
+        reason: "Default routing",
+      });
+    }
+
+    const client = new Anthropic({ apiKey: effectiveApiKey });
 
     const response = await client.messages.create({
       model: "claude-haiku-3-5-20241022",

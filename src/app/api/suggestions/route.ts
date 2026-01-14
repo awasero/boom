@@ -34,21 +34,19 @@ export async function POST(request: NextRequest) {
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "API key not configured" },
-      { status: 500 }
-    );
-  }
-
   try {
-    const { existingFiles, projectName } = await request.json();
+    const { existingFiles, projectName, apiKey: userApiKey } = await request.json();
 
     if (!existingFiles || existingFiles.length === 0) {
       return NextResponse.json({ suggestions: [] });
     }
 
-    const client = new Anthropic({ apiKey });
+    const effectiveApiKey = userApiKey || apiKey;
+    if (!effectiveApiKey) {
+      return NextResponse.json({ suggestions: [] }); // Silently return empty if no key
+    }
+
+    const client = new Anthropic({ apiKey: effectiveApiKey });
 
     let userPrompt = SUGGESTIONS_PROMPT;
 

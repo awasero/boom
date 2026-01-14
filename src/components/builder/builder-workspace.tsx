@@ -11,6 +11,7 @@ import { DeployPanel } from "./deploy-panel";
 import { GeneratedFile, ChatMessage, VibesitesConfig, ModelType, DesignReferences } from "@/types/project";
 import { DESIGN_PRESETS } from "./chat-panel";
 import { getProjectFiles, commitFiles, getProjectConfig, saveProjectConfig } from "@/lib/github-files";
+import { getAnthropicApiKey } from "@/lib/storage";
 import { parseGeneratedFiles } from "@/lib/claude";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -304,6 +305,11 @@ export function BuilderWorkspace({
     }
 
     try {
+      const apiKey = getAnthropicApiKey();
+      if (!apiKey) {
+        throw new Error("API key required. Please add your Anthropic API key in Settings.");
+      }
+
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -314,6 +320,7 @@ export function BuilderWorkspace({
           projectName: projectConfig?.name || repo,
           buildMode: projectConfig?.buildMode || "design",
           designContext,
+          apiKey,
         }),
       });
 
@@ -458,6 +465,14 @@ export function BuilderWorkspace({
     let endpoint = "/api/generate";
     let routingReason = "";
 
+    // Get API key from localStorage
+    const apiKey = getAnthropicApiKey();
+    if (!apiKey) {
+      setError("API key required. Please add your Anthropic API key in Settings.");
+      setIsGenerating(false);
+      return;
+    }
+
     try {
       // If command is specified, use predetermined routing
       if (command === "text") {
@@ -490,6 +505,7 @@ export function BuilderWorkspace({
             body: JSON.stringify({
               prompt: content,
               hasExistingFiles: files.length > 0,
+              apiKey,
             }),
           });
 
@@ -524,6 +540,7 @@ export function BuilderWorkspace({
           buildMode: projectConfig?.buildMode || "design",
           command,
           designContext,
+          apiKey,
         }),
       });
 
