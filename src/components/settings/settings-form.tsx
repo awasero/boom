@@ -172,7 +172,7 @@ export function SettingsForm() {
         <CardHeader>
           <CardTitle className="text-white text-base flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-violet-400" />
-            How Vibesites Works
+            How boom.git Works
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

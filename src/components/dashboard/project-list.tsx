@@ -89,7 +89,7 @@ export function ProjectList({ accessToken }: ProjectListProps) {
           className="gap-2 data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-400"
         >
           <Sparkles className="h-4 w-4" />
-          Vibesites Projects ({vibesitesProjects.length})
+          boom.git Projects ({vibesitesProjects.length})
         </TabsTrigger>
         <TabsTrigger
           value="all"
@@ -109,7 +109,7 @@ export function ProjectList({ accessToken }: ProjectListProps) {
                   <Sparkles className="h-8 w-8 text-violet-400" />
                 </div>
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">No Vibesites projects yet</h3>
+              <h3 className="text-lg font-semibold text-white mb-2">No boom.git projects yet</h3>
               <p className="text-zinc-400 text-center max-w-md">
                 Create your first AI-powered website by clicking the button above.
               </p>
@@ -217,7 +217,7 @@ function ProjectCard({ project, accessToken, isDeleting, onDeleteStart, onDelete
           {project.isVibesitesProject && (
             <Badge className="ml-2 shrink-0 bg-violet-500/20 text-violet-400 border-violet-500/30">
               <Sparkles className="h-3 w-3 mr-1" />
-              Vibesites
+              boom.git
             </Badge>
           )}
         </div>

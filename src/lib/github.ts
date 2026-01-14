@@ -65,7 +65,7 @@ export async function getUserRepos(accessToken: string): Promise<Project[]> {
             config = JSON.parse(content);
           }
         } catch {
-          // Not a Vibesites project
+          // Not a boom.git project
         }
       }
 
@@ -126,7 +126,7 @@ export async function createProject(
     throw error;
   }
 
-  // Create Vibesites config with build mode
+  // Create boom.git config with build mode
   const config: VibesitesConfig = {
     version: "1.0.0",
     createdAt: new Date().toISOString(),
@@ -141,7 +141,7 @@ export async function createProject(
     owner: repo.owner.login,
     repo: repo.name,
     path: ".vibesites/config.json",
-    message: "Initialize Vibesites project",
+    message: "Initialize boom.git project",
     content: toBase64(JSON.stringify(config, null, 2)),
   });
 
@@ -183,7 +183,7 @@ function getTemplateFiles(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="${description || "Built with Vibesites"}">
+  <meta name="description" content="${description || "Built with boom.git"}">
   <title>${name}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css">
@@ -193,7 +193,7 @@ function getTemplateFiles(
     <h1 class="text-4xl font-bold mb-4">${name}</h1>
     <p class="text-xl text-gray-600 mb-8">${description || "Welcome to your new website"}</p>
     <p class="text-sm text-gray-400">
-      Start chatting in Vibesites to build your site
+      Start chatting in boom.git to build your site
     </p>
   </main>
   <script src="script.js"></script>

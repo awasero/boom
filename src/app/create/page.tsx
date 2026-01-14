@@ -50,7 +50,7 @@ function CreateContent() {
       const project = await createProject(
         session.accessToken,
         name,
-        initialPrompt?.slice(0, 100) || "Created with Vibesites",
+        initialPrompt?.slice(0, 100) || "Created with boom.git",
         buildMode
       );
 

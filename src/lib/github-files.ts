@@ -249,7 +249,7 @@ export async function saveProjectConfig(
     owner,
     repo,
     path,
-    message: "Update Vibesites project settings",
+    message: "Update boom.git project settings",
     content: toBase64(content),
     branch,
     sha,

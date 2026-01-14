@@ -629,7 +629,7 @@ export function BuilderWorkspace({
   async function autoCommit(newFiles: GeneratedFile[], userPrompt: string) {
     setIsCommitting(true);
     try {
-      const commitMessage = `Update from Vibesites: ${userPrompt.slice(0, 50)}${
+      const commitMessage = `Update from boom.git: ${userPrompt.slice(0, 50)}${
         userPrompt.length > 50 ? "..." : ""
       }`;
       const sha = await commitFiles(
