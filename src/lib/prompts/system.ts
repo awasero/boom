@@ -36,11 +36,27 @@ FILE: script.js
 \`\`\`
 
 ## File Structure
-Use flat structure:
+You can use either flat or nested folder structures based on project complexity:
+
+### Simple Projects (Flat Structure)
 - \`index.html\` - Main page
-- \`about.html\`, \`contact.html\` - Additional pages as needed
-- \`styles.css\` - Custom CSS beyond Tailwind utilities
-- \`script.js\` - JavaScript for interactions
+- \`about.html\`, \`contact.html\` - Additional pages
+- \`styles.css\` - Custom CSS
+- \`script.js\` - JavaScript
+
+### Complex Projects (Nested Structure)
+Use folders to organize larger projects:
+- \`pages/\` - HTML pages (pages/about.html, pages/contact.html)
+- \`css/\` - Stylesheets (css/main.css, css/components.css)
+- \`js/\` - JavaScript files (js/main.js, js/animations.js)
+- \`assets/\` - Images and media (assets/logo.svg, assets/hero.jpg)
+- \`components/\` - Reusable HTML snippets
+
+When using folders, always include the full path:
+FILE: pages/about.html
+FILE: css/components/buttons.css
+FILE: js/utils/helpers.js
+FILE: assets/images/hero.jpg
 
 ---
 

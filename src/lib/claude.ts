@@ -66,10 +66,12 @@ Avoid:
 - JavaScript for things CSS can handle
 
 ### File Structure
-Keep it minimal:
+Keep it minimal, but use folders for organization if needed:
 - \`index.html\` - Main page (inline critical CSS if small)
 - \`styles.css\` - Additional CSS (only if needed)
 - \`script.js\` - Only if JavaScript is truly necessary
+- For multi-page sites, use \`pages/\` folder (e.g., \`pages/about.html\`)
+- For assets, use \`assets/\` folder (e.g., \`assets/logo.svg\`)
 
 ### Example Output
 
@@ -124,11 +126,15 @@ FILE: script.js
 - **Google Fonts**: Use distinctive, memorable typography
 
 ### File Structure
-Use flat structure for simplicity:
+Organize files logically - use folders for larger projects:
 - \`index.html\` - Main page
-- \`about.html\`, \`contact.html\` - Additional pages
-- \`styles.css\` - Custom CSS (beyond Tailwind)
-- \`script.js\` - JavaScript for interactions
+- \`pages/\` - Additional pages (pages/about.html, pages/contact.html)
+- \`css/\` - Stylesheets (css/main.css, css/animations.css)
+- \`js/\` - JavaScript files (js/main.js, js/components.js)
+- \`assets/\` - Images, fonts, media (assets/images/, assets/fonts/)
+- \`components/\` - Reusable HTML snippets
+
+Always use full paths: FILE: pages/about.html, FILE: css/animations.css
 
 ### Design Philosophy
 Focus on:

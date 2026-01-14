@@ -131,8 +131,13 @@ export async function getProjectFiles(
 ): Promise<GeneratedFile[]> {
   const octokit = new Octokit({ auth: accessToken });
   const files: GeneratedFile[] = [];
+  const visitedPaths = new Set<string>();
 
   async function fetchDirectory(path: string) {
+    // Prevent infinite loops and duplicate fetches
+    if (visitedPaths.has(path)) return;
+    visitedPaths.add(path);
+
     try {
       const { data } = await octokit.repos.getContent({
         owner,
@@ -153,6 +158,7 @@ export async function getProjectFiles(
               files.push({ path: item.path, content });
             }
           } else if (item.type === "dir" && !isIgnoredDir(item.path)) {
+            // Recursively fetch all subdirectories
             await fetchDirectory(item.path);
           }
         }
@@ -162,34 +168,82 @@ export async function getProjectFiles(
     }
   }
 
-  // Fetch root level files first (for Opus mode: HTML/CSS/JS)
+  // Start from root and recursively fetch all directories
   await fetchDirectory("");
-  // Fetch src and public directories (for Astro mode)
-  await fetchDirectory("src");
-  await fetchDirectory("public");
 
   return files;
 }
 
 function isRelevantFile(path: string): boolean {
   const relevantExtensions = [
+    // Web files
     ".html",
-    ".astro",
+    ".htm",
+    ".css",
+    ".js",
+    ".mjs",
+    ".json",
+    // TypeScript/React
     ".ts",
     ".tsx",
-    ".js",
     ".jsx",
-    ".css",
-    ".json",
+    // Astro
+    ".astro",
+    // Markdown
     ".md",
     ".mdx",
+    // Images (for reference, content will be base64)
+    ".svg",
+    ".ico",
+    // Config files
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".xml",
+    // Text files
+    ".txt",
+    ".env.example",
   ];
-  return relevantExtensions.some((ext) => path.endsWith(ext));
+
+  // Also match specific config filenames
+  const relevantFilenames = [
+    "package.json",
+    "tsconfig.json",
+    "tailwind.config.js",
+    "tailwind.config.ts",
+    "postcss.config.js",
+    "vite.config.js",
+    "vite.config.ts",
+    "astro.config.mjs",
+    ".prettierrc",
+    ".eslintrc",
+  ];
+
+  const filename = path.split("/").pop() || "";
+
+  return (
+    relevantExtensions.some((ext) => path.endsWith(ext)) ||
+    relevantFilenames.includes(filename)
+  );
 }
 
 function isIgnoredDir(path: string): boolean {
-  const ignoredDirs = ["node_modules", ".git", "dist", ".astro", ".vibesites", ".boovibe"];
-  return ignoredDirs.some((dir) => path.includes(dir));
+  const ignoredDirs = [
+    "node_modules",
+    ".git",
+    "dist",
+    "build",
+    ".astro",
+    ".vibesites",
+    ".boovibe",
+    ".next",
+    ".vercel",
+    ".github",
+    "coverage",
+    "__pycache__",
+    ".cache",
+  ];
+  return ignoredDirs.some((dir) => path.startsWith(dir) || path.includes("/" + dir));
 }
 
 export async function getProjectConfig(
