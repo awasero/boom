@@ -13,6 +13,8 @@ import {
   setCustomDomain,
   removeCustomDomain,
   generateDNSRecordsMessage,
+  makeRepoPublic,
+  isRepoPrivate,
   GITHUB_PAGES_DNS,
   DeploymentStatus,
 } from "@/lib/github-pages";
@@ -33,6 +35,8 @@ import {
   Trash2,
   Share2,
   AlertCircle,
+  Lock,
+  Unlock,
 } from "lucide-react";
 
 interface DeployPanelProps {
@@ -71,6 +75,11 @@ export function DeployPanel({
   const [showDNS, setShowDNS] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Private repo state
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [showPrivateWarning, setShowPrivateWarning] = useState(false);
+  const [makingPublic, setMakingPublic] = useState(false);
+
   const checkStatus = useCallback(async () => {
     try {
       const status = await getDeploymentStatus(accessToken, owner, repo);
@@ -84,6 +93,10 @@ export function DeployPanel({
       // Get custom domain
       const domain = await getCustomDomain(accessToken, owner, repo);
       setCustomDomainState(domain);
+
+      // Check if repo is private
+      const repoPrivate = await isRepoPrivate(accessToken, owner, repo);
+      setIsPrivate(repoPrivate);
     } catch (err) {
       console.error("Failed to check status:", err);
     } finally {
@@ -108,8 +121,43 @@ export function DeployPanel({
   async function handleEnableDeploy() {
     setDeploying(true);
     setError(null);
+    setShowPrivateWarning(false);
 
     try {
+      const result = await enableGitHubPages(accessToken, owner, repo);
+
+      if (result.success) {
+        setTimeout(checkStatus, 2000);
+      } else if (result.error === "PRIVATE_REPO_UPGRADE_REQUIRED") {
+        // Show the private repo warning UI
+        setShowPrivateWarning(true);
+      } else {
+        setError(result.error || "Failed to enable deployment");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to enable deployment");
+    } finally {
+      setDeploying(false);
+    }
+  }
+
+  async function handleMakePublicAndDeploy() {
+    setMakingPublic(true);
+    setError(null);
+
+    try {
+      // First, make the repo public
+      const publicResult = await makeRepoPublic(accessToken, owner, repo);
+
+      if (!publicResult.success) {
+        setError(publicResult.error || "Failed to make repository public");
+        return;
+      }
+
+      setIsPrivate(false);
+      setShowPrivateWarning(false);
+
+      // Now try to enable GitHub Pages again
       const result = await enableGitHubPages(accessToken, owner, repo);
 
       if (result.success) {
@@ -118,9 +166,9 @@ export function DeployPanel({
         setError(result.error || "Failed to enable deployment");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to enable deployment");
+      setError(err instanceof Error ? err.message : "Failed to make repository public");
     } finally {
-      setDeploying(false);
+      setMakingPublic(false);
     }
   }
 
@@ -248,7 +296,59 @@ export function DeployPanel({
                 </div>
               )}
 
-              {!deploymentStatus?.enabled ? (
+              {showPrivateWarning ? (
+                /* Private repo warning */
+                <div className="space-y-4">
+                  <div className="text-center py-6">
+                    <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center">
+                      <Lock className="h-7 w-7 text-amber-400" />
+                    </div>
+                    <h3 className="text-white font-semibold mb-1">Repository is Private</h3>
+                    <p className="text-zinc-400 text-sm max-w-xs mx-auto">
+                      GitHub Pages requires a paid plan for private repos, or you can make the repository public for free hosting.
+                    </p>
+                  </div>
+
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 space-y-2">
+                    <p className="text-amber-300 text-sm font-medium">Your options:</p>
+                    <ul className="text-xs text-amber-200/80 space-y-1.5 ml-4 list-disc">
+                      <li>Make repository public (free)</li>
+                      <li>Upgrade to GitHub Pro ($4/month)</li>
+                    </ul>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Button
+                      onClick={handleMakePublicAndDeploy}
+                      disabled={makingPublic}
+                      className="w-full h-11 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 text-white font-medium rounded-lg"
+                    >
+                      {makingPublic ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Making public...
+                        </>
+                      ) : (
+                        <>
+                          <Unlock className="h-4 w-4 mr-2" />
+                          Make Public & Deploy
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => setShowPrivateWarning(false)}
+                      variant="outline"
+                      className="w-full border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+
+                  <p className="text-[10px] text-zinc-600 text-center">
+                    Public repositories are visible to everyone on GitHub
+                  </p>
+                </div>
+              ) : !deploymentStatus?.enabled ? (
                 /* Not yet deployed */
                 <div className="space-y-4">
                   <div className="text-center py-6">
@@ -258,6 +358,15 @@ export function DeployPanel({
                     <h3 className="text-white font-semibold mb-1">Deploy to GitHub Pages</h3>
                     <p className="text-zinc-500 text-sm">Free hosting, instant setup</p>
                   </div>
+
+                  {isPrivate && (
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-amber-400 shrink-0" />
+                      <p className="text-xs text-amber-300">
+                        This repo is private. It will be made public to enable free hosting.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="bg-zinc-800/30 rounded-lg p-3 space-y-2">
                     <div className="flex items-center gap-2 text-sm">

@@ -212,7 +212,7 @@ export async function enableGitHubPages(
       });
     } catch (error: unknown) {
       // Pages might already be enabled, try updating instead
-      const err = error as { status?: number };
+      const err = error as { status?: number; message?: string };
       if (err.status === 409) {
         // Already exists, update it
         await octokit.repos.updateInformationAboutPagesSite({
@@ -220,6 +220,13 @@ export async function enableGitHubPages(
           repo,
           build_type: "workflow",
         });
+      } else if (err.status === 403 || (err.message && err.message.includes("plan does not support"))) {
+        // Private repo + free plan
+        return {
+          success: false,
+          url: "",
+          error: "PRIVATE_REPO_UPGRADE_REQUIRED",
+        };
       } else {
         throw error;
       }
@@ -308,6 +315,46 @@ export async function getWorkflowRuns(
     }));
   } catch {
     return [];
+  }
+}
+
+// Make repository public (required for free GitHub Pages)
+export async function makeRepoPublic(
+  accessToken: string,
+  owner: string,
+  repo: string
+): Promise<{ success: boolean; error?: string }> {
+  const octokit = new Octokit({ auth: accessToken });
+
+  try {
+    await octokit.repos.update({
+      owner,
+      repo,
+      private: false,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to make repo public:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to change repository visibility",
+    };
+  }
+}
+
+// Check if repository is private
+export async function isRepoPrivate(
+  accessToken: string,
+  owner: string,
+  repo: string
+): Promise<boolean> {
+  const octokit = new Octokit({ auth: accessToken });
+
+  try {
+    const { data } = await octokit.repos.get({ owner, repo });
+    return data.private;
+  } catch {
+    return false;
   }
 }
 
