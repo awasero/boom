@@ -99,7 +99,7 @@ export function HistoryPanel({
   return (
     <>
       <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <SheetContent className="bg-[#111113] border-zinc-800 w-[400px]">
+        <SheetContent className="bg-[#111113] border-zinc-800 w-[400px] max-w-[400px] overflow-hidden">
           <SheetHeader>
             <SheetTitle className="text-white flex items-center gap-2">
               <History className="h-5 w-5" />
@@ -121,19 +121,19 @@ export function HistoryPanel({
               </div>
             ) : (
               <ScrollArea className="h-[calc(100vh-200px)]">
-                <div className="space-y-2 pr-4">
+                <div className="space-y-2 pr-4 overflow-hidden">
                   {commits.map((commit, index) => (
                     <div
                       key={commit.sha}
                       className={`
-                        p-3 rounded-lg border transition-all
+                        p-3 rounded-lg border transition-all overflow-hidden
                         ${index === 0
                           ? "bg-emerald-500/10 border-emerald-500/30"
                           : "bg-zinc-900/50 border-zinc-800/50 hover:border-zinc-700/50"
                         }
                       `}
                     >
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start gap-3 overflow-hidden">
                         <div className={`
                           mt-0.5 p-1.5 rounded-lg shrink-0
                           ${index === 0 ? "bg-emerald-500/20" : "bg-zinc-800"}
@@ -144,11 +144,11 @@ export function HistoryPanel({
                             <GitCommit className="h-3.5 w-3.5 text-zinc-500" />
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-medium truncate ${
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <p className={`text-sm font-medium truncate max-w-full ${
                             index === 0 ? "text-emerald-300" : "text-zinc-300"
                           }`}>
-                            {commit.message.split("\n")[0]}
+                            {commit.message.split("\n")[0].slice(0, 60)}{commit.message.split("\n")[0].length > 60 ? "..." : ""}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-[10px] text-zinc-500">
