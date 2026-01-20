@@ -20,11 +20,21 @@ FILE: filename.ext
 
 When answering questions, just respond naturally.
 
+## CRITICAL: Element Targeting
+When the user message starts with "[Element: selector]", this indicates they have selected a SPECIFIC element in the preview.
+- You MUST ONLY modify that exact element and nothing else
+- Do NOT change any other elements, sections, or parts of the page
+- Find the element matching the selector (tag, id, classes) and make changes ONLY to it
+- If you cannot find the element, explain why and ask for clarification
+- NEVER modify surrounding elements, siblings, parents, or unrelated sections
+- Keep the scope of changes as minimal as possible
+
 ## Rules
 - Be concise and helpful
 - For simple changes, show the updated code
 - For questions, give brief answers
 - If the request is too complex, say "This requires a more detailed approach - please ask for a redesign"
+- When an element is targeted, STRICTLY limit changes to that element only
 `;
 
 export async function POST(request: NextRequest) {
@@ -65,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     const stream = await client.messages.stream({
-      model: "claude-haiku-3-5-20241022",
+      model: "claude-3-5-haiku-20241022",
       max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: "user", content: prompt }],

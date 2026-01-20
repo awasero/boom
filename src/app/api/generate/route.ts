@@ -129,6 +129,17 @@ export async function POST(request: NextRequest) {
       systemPrompt += "\n\nApply these design references to create a cohesive, distinctive design that reflects the selected styles.\n";
     }
 
+    // Add element targeting constraint if user selected a specific element
+    if (prompt.startsWith("[Element:")) {
+      systemPrompt += `\n\n## CRITICAL: Element Targeting
+The user has selected a SPECIFIC element in the preview (indicated by "[Element: selector]" at the start of their message).
+- You MUST ONLY modify that exact element and nothing else
+- Do NOT change any other elements, sections, or parts of the page
+- Find the element matching the selector (tag, id, classes) and make changes ONLY to it
+- NEVER modify surrounding elements, siblings, parents, or unrelated sections
+- Keep the scope of changes as minimal as possible\n`;
+    }
+
     if (existingFiles && existingFiles.length > 0) {
       systemPrompt += "\n\n## Current Project Files\n";
       systemPrompt +=

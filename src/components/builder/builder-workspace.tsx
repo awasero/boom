@@ -463,9 +463,9 @@ export function BuilderWorkspace({
     setStreamingContent("");
     setError(null);
 
-    // Determine model and endpoint
-    let model: ModelType = "opus";
-    let endpoint = "/api/generate";
+    // Determine model and endpoint - default to Haiku for quick edits
+    let model: ModelType = "haiku";
+    let endpoint = "/api/quick";
     let routingReason = "";
 
     // Get API key from localStorage

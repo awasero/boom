@@ -3,18 +3,14 @@
 import { useMemo, useState, useEffect } from "react";
 import { GeneratedFile } from "@/types/project";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import {
   Eye,
-  Code,
-  FileCode,
+  Pencil,
   Smartphone,
   Tablet,
   Monitor,
   Maximize2,
   RotateCcw,
-  MousePointer2,
 } from "lucide-react";
 
 interface PreviewPanelProps {
@@ -32,10 +28,9 @@ const VIEWPORT_SIZES: Record<ViewportSize, { width: number; height: number; labe
 };
 
 export function PreviewPanel({ files, onElementSelect }: PreviewPanelProps) {
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [viewport, setViewport] = useState<ViewportSize>("full");
+    const [viewport, setViewport] = useState<ViewportSize>("full");
   const [scale, setScale] = useState(1);
-  const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
+  const [activeTab, setActiveTab] = useState<"preview" | "edit">("preview");
   const [currentPage, setCurrentPage] = useState<string>("index.html");
   const [inspectMode, setInspectMode] = useState(false);
 
@@ -73,14 +68,16 @@ export function PreviewPanel({ files, onElementSelect }: PreviewPanelProps) {
     return () => window.removeEventListener('message', handleMessage);
   }, [files, onElementSelect]);
 
-  const displayFile = selectedFile
-    ? files.find((f) => f.path === selectedFile)
-    : files.find((f) => f.path.includes("pages/index"));
-
+  
   const currentViewport = VIEWPORT_SIZES[viewport];
 
   return (
-    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "preview" | "code")} className="h-full flex flex-col" id="preview-panel-tabs">
+    <Tabs value={activeTab} onValueChange={(v) => {
+      const newTab = v as "preview" | "edit";
+      setActiveTab(newTab);
+      // When switching to edit mode, enable inspect; when switching to preview, disable it
+      setInspectMode(newTab === "edit");
+    }} className="h-full flex flex-col" id="preview-panel-tabs">
       {/* Tab Header with Viewport Controls */}
       <div className="border-b border-zinc-800/50 bg-[#111113] px-4 flex items-center justify-between">
         <TabsList className="h-12 bg-transparent border-0 p-0">
@@ -92,11 +89,12 @@ export function PreviewPanel({ files, onElementSelect }: PreviewPanelProps) {
             Preview
           </TabsTrigger>
           <TabsTrigger
-            value="code"
-            className="gap-2 data-[state=active]:bg-zinc-800/50 data-[state=active]:text-white text-zinc-400 rounded-lg px-3"
+            value="edit"
+            className="gap-2 data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400 text-zinc-400 rounded-lg px-3"
+            onClick={() => setInspectMode(true)}
           >
-            <Code className="h-4 w-4" />
-            Code
+            <Pencil className="h-4 w-4" />
+            Edit
           </TabsTrigger>
         </TabsList>
 
@@ -123,24 +121,6 @@ export function PreviewPanel({ files, onElementSelect }: PreviewPanelProps) {
 
         {/* Viewport Controls */}
         <div className="flex items-center gap-1">
-          {/* Inspect Mode Toggle */}
-          <button
-            onClick={() => setInspectMode(!inspectMode)}
-            className={`
-              p-2 rounded-lg transition-all flex items-center gap-1.5
-              ${inspectMode
-                ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30"
-                : "bg-zinc-800/50 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-700/50"
-              }
-            `}
-            title="Inspect mode - hover to see elements, double-click to copy to chat"
-          >
-            <MousePointer2 className="h-4 w-4" />
-            {inspectMode && <span className="text-xs font-medium">Inspect</span>}
-          </button>
-
-          <div className="h-5 w-px bg-zinc-700 mx-1" />
-
           <div className="flex items-center bg-zinc-800/50 rounded-lg p-1 gap-0.5">
             <ViewportButton
               icon={<Smartphone className="h-4 w-4" />}
@@ -194,8 +174,8 @@ export function PreviewPanel({ files, onElementSelect }: PreviewPanelProps) {
         </div>
       </div>
 
-      {/* Only render active tab content to avoid layout issues */}
-      {activeTab === "preview" && (
+      {/* Both preview and edit tabs show the preview - edit mode just has inspect enabled */}
+      {(activeTab === "preview" || activeTab === "edit") && (
         <div id="preview-tab-content" className="flex-1 overflow-hidden relative bg-[#0a0a0b]">
           {files.length === 0 ? (
             <div id="preview-empty-state" className="absolute inset-0 flex flex-col items-center justify-center text-zinc-500">
@@ -266,65 +246,7 @@ export function PreviewPanel({ files, onElementSelect }: PreviewPanelProps) {
         </div>
       )}
 
-      {activeTab === "code" && (
-        <div id="code-tab-content" className="flex-1 flex overflow-hidden relative">
-        {/* File list sidebar */}
-        <div className="w-52 border-r border-zinc-800/50 bg-[#0d0d0f] overflow-auto">
-          <div className="p-3">
-            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider px-2 py-2">
-              Project Files
-            </p>
-            <div className="space-y-0.5">
-              {files.map((file) => (
-                <button
-                  key={file.path}
-                  onClick={() => setSelectedFile(file.path)}
-                  className={`
-                    w-full text-left px-2.5 py-2 text-sm rounded-lg
-                    flex items-center gap-2.5 transition-all
-                    ${
-                      (selectedFile || files[0]?.path) === file.path
-                        ? "bg-violet-500/10 text-violet-400 border border-violet-500/20"
-                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
-                    }
-                  `}
-                >
-                  <FileCode className="h-3.5 w-3.5 shrink-0 opacity-60" />
-                  <span className="truncate text-xs font-medium">
-                    {file.path.split("/").pop()}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Code viewer */}
-        <ScrollArea className="flex-1 bg-[#0a0a0b]">
-          {displayFile ? (
-            <div className="p-5">
-              <div className="flex items-center gap-3 mb-5">
-                <Badge
-                  variant="secondary"
-                  className="bg-zinc-800 text-zinc-300 border-zinc-700 font-mono text-xs"
-                >
-                  {displayFile.path}
-                </Badge>
-                <div className="h-px flex-1 bg-zinc-800/50" />
-              </div>
-              <pre className="text-sm text-zinc-300 font-mono whitespace-pre-wrap leading-relaxed">
-                <code>{displayFile.content}</code>
-              </pre>
-            </div>
-          ) : (
-            <div className="h-full flex items-center justify-center text-zinc-500">
-              <p>Select a file to view its code</p>
-            </div>
-          )}
-        </ScrollArea>
-        </div>
-      )}
-    </Tabs>
+          </Tabs>
   );
 }
 
