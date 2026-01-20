@@ -8,7 +8,8 @@ import { FileTree } from "./file-tree";
 import { CommitStatus } from "./commit-status";
 import { ProjectSettings } from "./project-settings";
 import { DeployPanel } from "./deploy-panel";
-import { GeneratedFile, ChatMessage, VibesitesConfig, ModelType, DesignReferences } from "@/types/project";
+import { HistoryPanel } from "./history-panel";
+import { GeneratedFile, ChatMessage, VibesitesConfig, ModelType, DesignReferences, ElementContext } from "@/types/project";
 import { DESIGN_PRESETS } from "./chat-panel";
 import { getProjectFiles, commitFiles, getProjectConfig, saveProjectConfig } from "@/lib/github-files";
 import { getAnthropicApiKey } from "@/lib/storage";
@@ -24,6 +25,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Terminal,
+  History,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -192,12 +194,13 @@ export function BuilderWorkspace({
   const [loading, setLoading] = useState(true);
   const [chatVisible, setChatVisible] = useState(true);
   const [showDeployPanel, setShowDeployPanel] = useState(false);
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [projectConfig, setProjectConfig] = useState<VibesitesConfig | null>(null);
   const [showGeneratingOverlay, setShowGeneratingOverlay] = useState(false);
   const [overlayError, setOverlayError] = useState<string | null>(null);
   const [designUrls, setDesignUrls] = useState<string[]>([]);
   const [designPresets, setDesignPresets] = useState<string[]>([]);
-  const [selectedElement, setSelectedElement] = useState<string | null>(null);
+  const [selectedElement, setSelectedElement] = useState<ElementContext | null>(null);
   const autoGenerateTriggered = useRef(false);
   const pendingPrompt = useRef<string | null>(null);
   const pendingReferences = useRef<DesignReferences | null>(null);
@@ -759,6 +762,16 @@ export function BuilderWorkspace({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setShowHistoryPanel(true)}
+            className="text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+          >
+            <History className="h-4 w-4 mr-1.5" />
+            History
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowDeployPanel(true)}
             className="text-zinc-400 hover:text-white hover:bg-zinc-800/50"
           >
@@ -783,7 +796,7 @@ export function BuilderWorkspace({
 
       {/* Main content */}
       <div id="builder-main-content" className="flex-1 flex overflow-hidden relative">
-        {/* Chat Panel - Collapsible */}
+        {/* Chat Panel - Collapsible (always mounted to preserve state) */}
         <div
           id="chat-panel-container"
           className={`
@@ -792,7 +805,7 @@ export function BuilderWorkspace({
             border-r border-zinc-800/50 bg-[#111113] flex flex-col overflow-hidden shrink-0
           `}
         >
-          {chatVisible && (
+          <div className={`w-[420px] h-full ${chatVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-200`}>
             <ChatPanel
               messages={messages}
               onSendMessage={handleSendMessage}
@@ -802,7 +815,7 @@ export function BuilderWorkspace({
               selectedElement={selectedElement}
               onClearSelectedElement={() => setSelectedElement(null)}
             />
-          )}
+          </div>
         </div>
 
         {/* Chat Toggle Button */}
@@ -876,6 +889,20 @@ export function BuilderWorkspace({
         accessToken={accessToken}
         isOpen={showDeployPanel}
         onClose={() => setShowDeployPanel(false)}
+      />
+
+      {/* History Panel */}
+      <HistoryPanel
+        owner={owner}
+        repo={repo}
+        accessToken={accessToken}
+        isOpen={showHistoryPanel}
+        onClose={() => setShowHistoryPanel(false)}
+        onRevert={async () => {
+          // Reload project files after revert
+          const updatedFiles = await getProjectFiles(accessToken, owner, repo);
+          setFiles(updatedFiles);
+        }}
       />
     </div>
   );

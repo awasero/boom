@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { ChatMessage, ModelType, ChatCommand, DesignPreset, GeneratedFile } from "@/types/project";
+import { ChatMessage, ModelType, ChatCommand, DesignPreset, GeneratedFile, ElementContext } from "@/types/project";
 import { getAnthropicApiKey } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -133,7 +133,7 @@ interface ChatPanelProps {
   isGenerating: boolean;
   streamingContent: string;
   files?: GeneratedFile[];
-  selectedElement?: string | null;
+  selectedElement?: ElementContext | null;
   onClearSelectedElement?: () => void;
 }
 
@@ -176,6 +176,18 @@ export function ChatPanel({
     }
   }, [selectedElement]);
 
+  function formatElementContext(ctx: ElementContext): string {
+    // Build a rich context string for the AI
+    let context = `[Element: ${ctx.selector}`;
+    if (ctx.section) context += ` in ${ctx.section}`;
+    if (ctx.parent && ctx.parent !== ctx.section) context += ` (parent: ${ctx.parent})`;
+    context += `]\n`;
+    if (ctx.text) context += `Text content: "${ctx.text.slice(0, 80)}${ctx.text.length > 80 ? '...' : ''}"\n`;
+    if (ctx.html) context += `HTML snippet:\n\`\`\`html\n${ctx.html}\n\`\`\`\n`;
+    context += `IMPORTANT: Only modify this specific element. Do not change any other parts of the page.\n`;
+    return context;
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (input.trim() && !isGenerating) {
@@ -187,7 +199,7 @@ export function ChatPanel({
         const command = COMMANDS.find(c => c.name === cmdName);
         if (command) {
           const messageWithElement = selectedElement
-            ? `[Element: ${selectedElement}] ${cmdArgs || `Run ${command.name} optimization`}`
+            ? `${formatElementContext(selectedElement)}${cmdArgs || `Run ${command.name} optimization`}`
             : (cmdArgs || `Run ${command.name} optimization`);
           onSendMessage(messageWithElement, cmdName);
           setInput("");
@@ -197,7 +209,7 @@ export function ChatPanel({
       }
       // Include selected element context if present
       const messageWithElement = selectedElement
-        ? `[Element: ${selectedElement}] ${input.trim()}`
+        ? `${formatElementContext(selectedElement)}${input.trim()}`
         : input.trim();
       onSendMessage(messageWithElement);
       setInput("");
@@ -291,22 +303,34 @@ export function ChatPanel({
 
           {/* Selected Element Badge */}
           {selectedElement && (
-            <div className="mb-2 flex items-center gap-2">
-              <Badge
-                variant="secondary"
-                className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 gap-1.5 pr-1"
-              >
-                <MousePointer2 className="h-3 w-3" />
-                <code className="font-mono text-[10px]">{selectedElement}</code>
-                <button
-                  type="button"
-                  onClick={onClearSelectedElement}
-                  className="p-0.5 rounded hover:bg-emerald-500/30 ml-1"
+            <div className="mb-2 flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="secondary"
+                  className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 gap-1.5 pr-1"
                 >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-              <span className="text-[10px] text-zinc-500">Target element</span>
+                  <MousePointer2 className="h-3 w-3" />
+                  <code className="font-mono text-[10px]">{selectedElement.selector}</code>
+                  <button
+                    type="button"
+                    onClick={onClearSelectedElement}
+                    className="p-0.5 rounded hover:bg-emerald-500/30 ml-1"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+                <span className="text-[10px] text-zinc-500">Target element</span>
+              </div>
+              {selectedElement.section && (
+                <span className="text-[10px] text-zinc-600 pl-1">
+                  in <code className="text-zinc-500">{selectedElement.section}</code>
+                </span>
+              )}
+              {selectedElement.text && (
+                <span className="text-[10px] text-zinc-600 pl-1 truncate max-w-full">
+                  &quot;{selectedElement.text.slice(0, 50)}{selectedElement.text.length > 50 ? '...' : ''}&quot;
+                </span>
+              )}
             </div>
           )}
 
@@ -317,7 +341,7 @@ export function ChatPanel({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={selectedElement ? `What do you want to change on ${selectedElement}?` : (hasFiles ? "What would you like to change?" : "Describe what you want to build...")}
+              placeholder={selectedElement ? `What do you want to change on ${selectedElement.selector}?` : (hasFiles ? "What would you like to change?" : "Describe what you want to build...")}
               className="
                 min-h-[80px] max-h-[200px] resize-none pr-14
                 bg-zinc-800/50 border-zinc-700/50
@@ -468,11 +492,11 @@ function EmptyState({
                     <div className="p-1.5 rounded-lg bg-emerald-500/20 group-hover:bg-emerald-500/30 transition-colors shrink-0">
                       <IconComponent className="h-4 w-4 text-emerald-400" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-emerald-300 group-hover:text-emerald-200 transition-colors">
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <p className="text-sm font-medium text-emerald-300 group-hover:text-emerald-200 transition-colors truncate">
                         {suggestion.label}
                       </p>
-                      <p className="text-[11px] text-zinc-500 truncate">
+                      <p className="text-[11px] text-zinc-500 truncate max-w-full">
                         {suggestion.prompt}
                       </p>
                     </div>

@@ -78,3 +78,12 @@ export interface ChatCommand {
   model: ModelType; // Which model to use
   icon: string; // Icon name
 }
+
+// Element context for targeted edits
+export interface ElementContext {
+  selector: string; // CSS selector (tag#id.class)
+  parent: string; // Parent element selector
+  section: string; // Containing section/landmark
+  text: string; // Text content (truncated)
+  html: string; // Outer HTML (truncated)
+}

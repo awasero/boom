@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { GeneratedFile } from "@/types/project";
+import { GeneratedFile, ElementContext } from "@/types/project";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Eye,
@@ -15,7 +15,7 @@ import {
 
 interface PreviewPanelProps {
   files: GeneratedFile[];
-  onElementSelect?: (elementInfo: string) => void;
+  onElementSelect?: (elementInfo: ElementContext) => void;
 }
 
 type ViewportSize = "mobile" | "tablet" | "desktop" | "full";
@@ -362,6 +362,30 @@ function generatePreviewHtml(files: GeneratedFile[], currentPage: string = "inde
           return info.tag;
         }
 
+        function getElementContext(el) {
+          const selector = getSelector(el);
+          const textContent = el.textContent?.trim().slice(0, 100) || '';
+          const outerHtml = el.outerHTML?.slice(0, 500) || '';
+
+          // Get parent context for better location
+          const parent = el.parentElement;
+          const parentInfo = parent ? getElementInfo(parent) : null;
+          const parentSelector = parentInfo ? (parentInfo.tag + (parentInfo.id || parentInfo.classes || '')) : '';
+
+          // Find section/landmark context
+          let section = el.closest('section, header, footer, main, nav, article, aside');
+          const sectionInfo = section ? getElementInfo(section) : null;
+          const sectionSelector = sectionInfo ? (sectionInfo.tag + (sectionInfo.id || sectionInfo.classes || '')) : '';
+
+          return {
+            selector,
+            parent: parentSelector,
+            section: sectionSelector,
+            text: textContent,
+            html: outerHtml
+          };
+        }
+
         document.addEventListener('mouseover', function(e) {
           const el = e.target;
           if (el === document.body || el === document.documentElement) return;
@@ -397,8 +421,8 @@ function generatePreviewHtml(files: GeneratedFile[], currentPage: string = "inde
           if (currentEl) {
             e.preventDefault();
             e.stopPropagation();
-            const selector = getSelector(currentEl);
-            window.parent.postMessage({ type: 'elementSelected', info: selector }, '*');
+            const context = getElementContext(currentEl);
+            window.parent.postMessage({ type: 'elementSelected', info: context }, '*');
           }
         });
 

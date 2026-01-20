@@ -309,3 +309,86 @@ export async function saveProjectConfig(
     sha,
   });
 }
+
+// Commit history types
+export interface CommitInfo {
+  sha: string;
+  message: string;
+  date: string;
+  author: string;
+}
+
+// Get commit history for the repository
+export async function getCommitHistory(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  limit: number = 20
+): Promise<CommitInfo[]> {
+  const octokit = new Octokit({ auth: accessToken });
+
+  try {
+    const { data } = await octokit.repos.listCommits({
+      owner,
+      repo,
+      per_page: limit,
+    });
+
+    return data.map((commit) => ({
+      sha: commit.sha,
+      message: commit.commit.message,
+      date: commit.commit.author?.date || "",
+      author: commit.commit.author?.name || "Unknown",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// Revert to a specific commit by creating a new commit with that state
+export async function revertToCommit(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  targetSha: string
+): Promise<string> {
+  const octokit = new Octokit({ auth: accessToken });
+
+  // Get the default branch
+  const { data: repoData } = await octokit.repos.get({ owner, repo });
+  const branch = repoData.default_branch;
+
+  // Get the tree from the target commit
+  const { data: targetCommit } = await octokit.git.getCommit({
+    owner,
+    repo,
+    commit_sha: targetSha,
+  });
+
+  // Get the current HEAD commit
+  const { data: refData } = await octokit.git.getRef({
+    owner,
+    repo,
+    ref: `heads/${branch}`,
+  });
+  const currentSha = refData.object.sha;
+
+  // Create a new commit that points to the target tree
+  const { data: newCommit } = await octokit.git.createCommit({
+    owner,
+    repo,
+    message: `Revert to: ${targetCommit.message.split('\n')[0]}`,
+    tree: targetCommit.tree.sha,
+    parents: [currentSha],
+  });
+
+  // Update the branch reference
+  await octokit.git.updateRef({
+    owner,
+    repo,
+    ref: `heads/${branch}`,
+    sha: newCommit.sha,
+  });
+
+  return newCommit.sha;
+}
