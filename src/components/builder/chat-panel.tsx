@@ -40,8 +40,8 @@ const COMMANDS: ChatCommand[] = [
   { name: "text", description: "Quick text and copy changes", model: "haiku", icon: "Pencil" },
   { name: "tweak", description: "Simple design adjustments (colors, spacing, fonts)", model: "haiku", icon: "SlidersHorizontal" },
   { name: "seo", description: "Optimize for SEO with meta tags, schemas, and structured data", model: "sonnet", icon: "Search" },
-  { name: "mobile", description: "Redesign with mobile-first approach", model: "opus", icon: "Smartphone" },
-  { name: "design", description: "Creative frontend design mode", model: "opus", icon: "Palette" },
+  { name: "mobile", description: "Mobile-first optimization", model: "sonnet", icon: "Smartphone" },
+  { name: "design", description: "Creative design enhancements", model: "sonnet", icon: "Palette" },
 ];
 
 // Model display configuration
@@ -253,6 +253,10 @@ export function ChatPanel({
             {messages.map((message) => (
               <MessageBubble key={message.id} message={message} />
             ))}
+
+            {isGenerating && !streamingContent && (
+              <ThinkingIndicator />
+            )}
 
             {isGenerating && streamingContent && (
               <StreamingMessage content={streamingContent} />
@@ -514,6 +518,31 @@ function EmptyState({
           <span className="text-violet-400">Tip:</span> Be specific about what you want.
           Instead of &quot;make it better&quot;, try &quot;increase font size and add more padding around sections&quot;.
         </p>
+      </div>
+    </div>
+  );
+}
+
+function ThinkingIndicator() {
+  return (
+    <div className="flex gap-3">
+      <Avatar className="h-8 w-8 shrink-0 ring-2 ring-violet-500/20">
+        <AvatarFallback className="bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white">
+          <Sparkles className="h-4 w-4" />
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="font-medium text-sm text-white">Claude</span>
+        </div>
+        <div className="flex items-center gap-3 py-2">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '0ms', animationDuration: '600ms' }} />
+            <div className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms', animationDuration: '600ms' }} />
+            <div className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '300ms', animationDuration: '600ms' }} />
+          </div>
+          <span className="text-sm text-zinc-500 animate-pulse">Thinking...</span>
+        </div>
       </div>
     </div>
   );

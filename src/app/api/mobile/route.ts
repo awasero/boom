@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@/lib/auth";
-import {
-  buildEditGeneralPrompt,
-  buildEditElementPrompt,
-  ElementContext,
-} from "@/lib/prompts/edit";
-import {
-  buildTextCommandPrompt,
-  buildTweakCommandPrompt,
-  DesignSystem,
-} from "@/lib/prompts/commands";
+import { buildMobileCommandPrompt, DesignSystem } from "@/lib/prompts/commands";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -26,8 +17,7 @@ export async function POST(request: NextRequest) {
       prompt,
       existingFiles,
       projectName,
-      command,
-      elementContext,
+      targetSection,
       designSystem,
       apiKey: userApiKey,
     } = await request.json();
@@ -42,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     const client = new Anthropic({ apiKey: effectiveApiKey });
 
-    // Build files string for prompts
+    // Build files string for the prompt
     let filesString = "";
     if (existingFiles && existingFiles.length > 0) {
       for (const file of existingFiles) {
@@ -50,64 +40,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build the appropriate prompt based on command and context
-    let systemPrompt: string;
+    // Default design system if not provided
+    const ds: DesignSystem = designSystem || {
+      colors: "Not extracted",
+      fonts: "Not extracted",
+      spacing: "Not extracted",
+      borderRadius: "Not extracted",
+      aesthetic: "Not extracted",
+      texturesShadowsEffects: "Not extracted",
+    };
 
-    if (command === "text" && elementContext) {
-      // /text command - text changes only
-      systemPrompt = buildTextCommandPrompt(
-        projectName || "Untitled Project",
-        elementContext.selector || "",
-        elementContext.text || "",
-        elementContext.html || "",
-        filesString,
-        prompt
-      );
-    } else if (command === "tweak" && elementContext) {
-      // /tweak command - simple design adjustments
-      const ds: DesignSystem = designSystem || {
-        colors: "Not extracted",
-        fonts: "Not extracted",
-        spacing: "Not extracted",
-        borderRadius: "Not extracted",
-        aesthetic: "Not extracted",
-        texturesShadowsEffects: "Not extracted",
-      };
-      systemPrompt = buildTweakCommandPrompt(
-        projectName || "Untitled Project",
-        elementContext.selector || "",
-        elementContext.html || "",
-        ds,
-        filesString,
-        prompt
-      );
-    } else if (elementContext && elementContext.selector) {
-      // Element-targeted edit (no specific command)
-      const element: ElementContext = {
-        selector: elementContext.selector || "",
-        section: elementContext.section || "unknown",
-        parent: elementContext.parent || "unknown",
-        textContent: elementContext.text || "",
-        elementHtml: elementContext.html || "",
-      };
-      systemPrompt = buildEditElementPrompt(
-        projectName || "Untitled Project",
-        element,
-        filesString,
-        prompt
-      );
-    } else {
-      // General edit (no element selected)
-      systemPrompt = buildEditGeneralPrompt(
-        projectName || "Untitled Project",
-        filesString,
-        prompt
-      );
-    }
+    // Build the mobile optimization prompt
+    const systemPrompt = buildMobileCommandPrompt(
+      projectName || "Untitled Project",
+      targetSection || "entire page",
+      ds,
+      filesString,
+      prompt
+    );
 
     const stream = await client.messages.stream({
-      model: "claude-3-5-haiku-20241022",
-      max_tokens: 4096,
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 8192,
       system: systemPrompt,
       messages: [{ role: "user", content: prompt }],
     });
@@ -131,8 +85,8 @@ export async function POST(request: NextRequest) {
           controller.close();
         } catch (error: unknown) {
           console.error("Stream error:", error);
-          let errorMessage = "Request failed";
-          if (error && typeof error === 'object' && 'message' in error) {
+          let errorMessage = "Mobile optimization failed";
+          if (error && typeof error === "object" && "message" in error) {
             errorMessage = String((error as { message: string }).message);
           }
           controller.enqueue(
@@ -152,9 +106,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Quick request error:", error);
+    console.error("Mobile request error:", error);
     return NextResponse.json(
-      { error: "Failed to process request" },
+      { error: "Failed to process mobile optimization request" },
       { status: 500 }
     );
   }
