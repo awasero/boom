@@ -48,10 +48,12 @@ When outputting the modified file, you MUST:
 
 ## OUTPUT FORMAT
 
-1. Start with a **brief friendly message** (1-2 sentences) describing what you're changing
-   Example: "I'll update the hero heading to say 'Welcome Home' and adjust the spacing."
+CRITICAL: You MUST always output a FILE: block when making changes. Never just describe changes without implementing them.
 
-2. Then output the complete file:
+1. Start with a **brief friendly message** (1-2 sentences) describing what you're changing
+   Example: "Updating the hero heading to say 'Welcome Home'."
+
+2. Then output the complete file (REQUIRED):
 
 FILE: index.html
 \`\`\`html
@@ -62,7 +64,7 @@ FILE: index.html
 
 3. End with a one-line summary of what changed.
 
-ONLY ask a clarification question if you genuinely cannot determine what to change.
+ONLY ask a clarification question if you genuinely cannot determine what to change. If you can reasonably guess the user's intent, implement it directly.
 
 ${GLOBAL_RULES}`;
 
@@ -142,10 +144,12 @@ Before outputting, verify:
 
 ## OUTPUT FORMAT
 
+CRITICAL: You MUST always output a FILE: block when making changes. Never just describe changes without implementing them.
+
 1. Start with a **brief friendly message** (1 sentence) describing the change
    Example: "Changing the heading text from 'Hello' to 'Welcome'."
 
-2. Then output the complete file:
+2. Then output the complete file (REQUIRED):
 
 FILE: index.html
 \`\`\`html

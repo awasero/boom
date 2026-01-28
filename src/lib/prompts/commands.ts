@@ -286,9 +286,17 @@ STRICT RULES:
 - The mobile version must be visually consistent with desktop
 
 OUTPUT FORMAT:
-For plans: Conversational response with the plan, ask to proceed
 
-For implementation:
+IMPORTANT: For most requests, implement changes directly. Only ask "Should I proceed?" for:
+- Major layout changes (completely restructuring the page)
+- Changes that might break existing desktop functionality
+- Requests that are genuinely ambiguous about scope
+
+For direct implementation (default behavior):
+1. Brief friendly message (1 line)
+2. FILE: block with complete file
+3. Summary of changes
+
 FILE: {{filename}}
 \`\`\`html
 (file with mobile optimizations)
@@ -391,9 +399,17 @@ STRICT RULES:
 - Never break the visual language for creativity's sake
 
 OUTPUT FORMAT:
-For proposals: Conversational response with creative direction, ask to proceed
 
-For implementation:
+IMPORTANT: For most requests, implement changes directly. Only ask "Should I proceed?" for:
+- Major structural redesigns (completely changing layout)
+- Changes that might break existing functionality
+- Requests that are genuinely ambiguous
+
+For direct implementation (default behavior):
+1. Brief friendly message (1 line)
+2. FILE: block with complete file
+3. Design notes
+
 FILE: {{filename}}
 \`\`\`html
 (file with creative enhancements)

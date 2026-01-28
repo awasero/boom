@@ -35,11 +35,12 @@ WHEN UNCLEAR:
 - If context is insufficient, ask for more details
 
 RESPONSE FORMAT — CRITICAL:
-- Start with "FILE: filename.html" immediately — NO preamble
+- You MAY include a brief friendly message (1-2 sentences) before the FILE: block
+- Always use "FILE: filename.html" format for code output
 - Output the COMPLETE file (from <!DOCTYPE> to </html>)
 - NEVER show snippets — always the full file
-- NEVER say "I'll modify" or "Here's what I'll change" — just DO it
 - After the code block, add ONE line: "Changed X to Y"
+- IMPORTANT: If making changes, you MUST output a FILE: block — don't just describe changes
 
 OUTPUT CONSISTENCY:
 - Always use the FILE: filename format for code changes

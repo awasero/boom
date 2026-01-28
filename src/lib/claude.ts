@@ -259,15 +259,34 @@ export async function generateWebsite(
 
 export function parseGeneratedFiles(content: string): GeneratedFile[] {
   const files: GeneratedFile[] = [];
-  const filePattern = /FILE:\s*([^\n]+)\n```(?:\w+)?\n([\s\S]*?)```/g;
+
+  // More flexible pattern that handles:
+  // - Optional whitespace/newlines between FILE: line and code block
+  // - Language identifiers with various characters (html, css, javascript, etc.)
+  // - Extra blank lines after the opening backticks
+  const filePattern = /FILE:\s*([^\n]+?)\s*\n+\s*```(\w*)\n([\s\S]*?)```/g;
 
   let match;
   while ((match = filePattern.exec(content)) !== null) {
     const path = match[1].trim();
-    const fileContent = match[2].trim();
+    const fileContent = match[3].trim();
 
     if (path && fileContent) {
       files.push({ path, content: fileContent });
+    }
+  }
+
+  // Fallback: If no FILE: blocks found, try to find standalone code blocks
+  // that look like complete HTML files (for cases where AI forgot the FILE: prefix)
+  if (files.length === 0) {
+    const standaloneHtmlPattern = /```html\n(<!DOCTYPE[\s\S]*?<\/html>)\s*```/gi;
+    let standaloneMatch;
+    while ((standaloneMatch = standaloneHtmlPattern.exec(content)) !== null) {
+      const fileContent = standaloneMatch[1].trim();
+      if (fileContent) {
+        // Assume it's index.html if no path was specified
+        files.push({ path: "index.html", content: fileContent });
+      }
     }
   }
 
