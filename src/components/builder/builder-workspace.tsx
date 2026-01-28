@@ -847,6 +847,7 @@ export function BuilderWorkspace({
             <ChatPanel
               messages={messages}
               onSendMessage={handleSendMessage}
+              onClearChat={() => setMessages([])}
               isGenerating={isGenerating}
               streamingContent={streamingContent}
               files={files}

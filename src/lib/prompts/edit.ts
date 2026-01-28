@@ -46,25 +46,21 @@ When outputting the modified file, you MUST:
 - NEVER replace complex class lists with simpler ones
 - NEVER restructure HTML that wasn't mentioned in the request
 
-## OUTPUT FORMAT — CRITICAL
+## OUTPUT FORMAT
 
-**DO NOT explain what you're about to do. DO NOT show snippets. DO NOT describe changes.**
+1. Start with a **brief friendly message** (1-2 sentences) describing what you're changing
+   Example: "I'll update the hero heading to say 'Welcome Home' and adjust the spacing."
 
-Just output the complete file immediately:
+2. Then output the complete file:
 
 FILE: index.html
 \`\`\`html
 <!DOCTYPE html>
-<html>
-... (THE ENTIRE FILE from <!DOCTYPE> to </html>) ...
+... (THE ENTIRE FILE) ...
 </html>
 \`\`\`
 
-RULES:
-1. Start your response with "FILE:" immediately — no preamble
-2. Output the COMPLETE file from first line to last line
-3. The file must be valid HTML that can be saved and opened
-4. After the code block, you may add a ONE LINE summary of what changed
+3. End with a one-line summary of what changed.
 
 ONLY ask a clarification question if you genuinely cannot determine what to change.
 
@@ -144,27 +140,21 @@ Before outputting, verify:
 - [ ] All attributes unchanged (data-*, aria-*, id, etc.)
 - [ ] Only the requested change was made
 
-## OUTPUT FORMAT — CRITICAL
+## OUTPUT FORMAT
 
-**DO NOT explain what you're about to do. DO NOT show snippets. DO NOT describe changes.**
+1. Start with a **brief friendly message** (1 sentence) describing the change
+   Example: "Changing the heading text from 'Hello' to 'Welcome'."
 
-Just output the complete file immediately:
+2. Then output the complete file:
 
 FILE: index.html
 \`\`\`html
 <!DOCTYPE html>
-<html>
-... (THE ENTIRE FILE from <!DOCTYPE> to </html>) ...
+... (THE ENTIRE FILE) ...
 </html>
 \`\`\`
 
-RULES:
-1. Start your response with "FILE:" immediately — no preamble
-2. Output the COMPLETE file from first line to last line
-3. The file must be valid HTML that can be saved and opened
-4. After the code block, you may add a ONE LINE summary: "Changed X to Y"
-
-If you cannot locate the element, ONLY then ask: "I couldn't find that element. Can you click on it again?"
+If you cannot locate the element: "I couldn't find that element. Can you click on it again?"
 
 ${GLOBAL_RULES}`;
 

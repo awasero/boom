@@ -130,6 +130,7 @@ export const DESIGN_PRESETS: DesignPreset[] = [
 interface ChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (message: string, command?: string) => void;
+  onClearChat?: () => void;
   isGenerating: boolean;
   streamingContent: string;
   files?: GeneratedFile[];
@@ -140,6 +141,7 @@ interface ChatPanelProps {
 export function ChatPanel({
   messages,
   onSendMessage,
+  onClearChat,
   isGenerating,
   streamingContent,
   files = [],
@@ -224,6 +226,22 @@ export function ChatPanel({
 
   return (
     <div className="flex flex-col h-full">
+      {/* Chat Header with Clear Button */}
+      {messages.length > 0 && (
+        <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800/50 bg-[#0d0d0f]">
+          <span className="text-xs text-zinc-500">{messages.length} message{messages.length !== 1 ? 's' : ''}</span>
+          {onClearChat && (
+            <button
+              onClick={onClearChat}
+              disabled={isGenerating}
+              className="text-xs text-zinc-500 hover:text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Clear chat
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         {messages.length === 0 ? (

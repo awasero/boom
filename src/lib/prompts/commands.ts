@@ -2,7 +2,7 @@ import { GLOBAL_RULES } from "./global-rules";
 
 // /text — Text Changes Only — Haiku (LIMITED TOKENS: 2048)
 // Uses PATCH approach - model outputs find/replace, client applies it
-export const TEXT_COMMAND_PROMPT = `You are doing a simple text replacement. Output a PATCH that the system will apply.
+export const TEXT_COMMAND_PROMPT = `You are doing a simple text replacement. Output a friendly message and PATCH.
 
 TARGET ELEMENT:
 - Selector: {{selector}}
@@ -14,12 +14,15 @@ REQUEST: {{user_message}}
 ## YOUR TASK
 
 1. Look at the target element HTML
-2. Create a PATCH that changes ONLY the text
-3. Keep ALL classes, tags, and attributes EXACTLY the same
+2. Write a brief friendly confirmation (1 line)
+3. Create a PATCH that changes ONLY the text
 
-## OUTPUT FORMAT (STRICT)
+## OUTPUT FORMAT
 
-You MUST output in this exact format:
+First, a friendly one-liner like:
+"Changing the {{selector}} text from "{{current_text}}" to "new text"."
+
+Then the PATCH:
 
 PATCH:
 \`\`\`
@@ -31,26 +34,28 @@ REPLACE:
 
 ## EXAMPLE
 
-Target: \`<span class="block text-white animate-fade-in">Flows</span>\`
+Target: \`<span class="block text-white">Flows</span>\`
 Request: "change to Works"
+
+Changing the heading text from "Flows" to "Works".
 
 PATCH:
 \`\`\`
 FIND:
-<span class="block text-white animate-fade-in">Flows</span>
+<span class="block text-white">Flows</span>
 REPLACE:
-<span class="block text-white animate-fade-in">Works</span>
+<span class="block text-white">Works</span>
 \`\`\`
 
 ## RULES
-- The FIND must match the original EXACTLY (copy it precisely)
+- Start with a friendly confirmation message
+- The FIND must match the original EXACTLY
 - The REPLACE must be identical except for the text change
-- NEVER change classes, attributes, or structure
-- Output ONLY the PATCH block - nothing else`;
+- NEVER change classes, attributes, or structure`;
 
 // /tweak — Simple Design Adjustments — Haiku (LIMITED TOKENS: 2048)
 // Uses PATCH approach - model outputs find/replace, client applies it
-export const TWEAK_COMMAND_PROMPT = `You are making a simple style adjustment. Output a PATCH that the system will apply.
+export const TWEAK_COMMAND_PROMPT = `You are making a simple style adjustment. Output a friendly message and PATCH.
 
 TARGET ELEMENT:
 - Selector: {{selector}}
@@ -66,12 +71,15 @@ REQUEST: {{user_message}}
 ## YOUR TASK
 
 1. Look at the target element HTML
-2. Create a PATCH that adds/modifies the style
-3. Keep ALL existing classes and attributes
+2. Write a brief friendly confirmation (1 line)
+3. Create a PATCH that applies the style change
 
-## OUTPUT FORMAT (STRICT)
+## OUTPUT FORMAT
 
-You MUST output in this exact format:
+First, a friendly one-liner like:
+"Updating the {{selector}} - changing the background to red."
+
+Then the PATCH:
 
 PATCH:
 \`\`\`
@@ -83,9 +91,10 @@ REPLACE:
 
 ## EXAMPLES
 
-**Color change:**
 Target: \`<button class="px-4 py-2 bg-blue-500 text-white">Click</button>\`
 Request: "make it red"
+
+Updating the button color from blue to red.
 
 PATCH:
 \`\`\`
@@ -95,23 +104,11 @@ REPLACE:
 <button class="px-4 py-2 bg-red-500 text-white">Click</button>
 \`\`\`
 
-**Size change:**
-Target: \`<button class="px-4 py-2 bg-blue-500">Click</button>\`
-Request: "make it bigger"
-
-PATCH:
-\`\`\`
-FIND:
-<button class="px-4 py-2 bg-blue-500">Click</button>
-REPLACE:
-<button class="px-6 py-3 bg-blue-500">Click</button>
-\`\`\`
-
 ## RULES
+- Start with a friendly confirmation message
 - The FIND must match the original EXACTLY
 - Keep ALL existing classes - only modify the relevant ones
-- NEVER remove classes
-- Output ONLY the PATCH block - nothing else`;
+- NEVER remove classes`;
 
 // /seo — SEO Optimization — Sonnet
 export const SEO_COMMAND_PROMPT = `You are an SEO specialist optimizing a web page for search visibility.
