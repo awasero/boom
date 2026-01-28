@@ -36,12 +36,18 @@ Output: \`<h1 class="font-display text-[2.75rem] sm:text-5xl mb-8 animate-fade-i
 
 WRONG: \`<h1 class="text-4xl font-bold">Welcome</h1>\` — Never simplify classes!
 
-## OUTPUT
+## OUTPUT — CRITICAL
 
-FILE: filename.html
+**NO PREAMBLE. NO EXPLANATION. Just output the file:**
+
+FILE: index.html
 \`\`\`html
-(complete file with text changed, everything else IDENTICAL)
+<!DOCTYPE html>
+... (COMPLETE FILE) ...
+</html>
 \`\`\`
+
+Changed "old text" to "new text".
 
 ${GLOBAL_RULES}`;
 
@@ -93,14 +99,18 @@ Output: \`<button class="px-6 py-3 bg-blue-500 text-white rounded">\` — Only p
 
 WRONG: \`<button class="p-6 bg-blue-500">\` — Don't simplify!
 
-## OUTPUT
+## OUTPUT — CRITICAL
 
-FILE: filename.html
+**NO PREAMBLE. NO EXPLANATION. Just output the file:**
+
+FILE: index.html
 \`\`\`html
-(complete file with style tweak applied)
+<!DOCTYPE html>
+... (COMPLETE FILE) ...
+</html>
 \`\`\`
 
-Note: "Changed [property] from [old] to [new]"
+Changed [property] from [old] to [new].
 
 ${GLOBAL_RULES}`;
 

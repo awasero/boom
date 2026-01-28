@@ -34,14 +34,16 @@ WHEN UNCLEAR:
 - Don't guess if multiple interpretations exist
 - If context is insufficient, ask for more details
 
-RESPONSE QUALITY:
-- Be concise — no unnecessary explanations
-- Show code changes, not descriptions of changes
-- If something can't be done, explain why briefly
-- Suggest alternatives when declining a request
+RESPONSE FORMAT — CRITICAL:
+- Start with "FILE: filename.html" immediately — NO preamble
+- Output the COMPLETE file (from <!DOCTYPE> to </html>)
+- NEVER show snippets — always the full file
+- NEVER say "I'll modify" or "Here's what I'll change" — just DO it
+- After the code block, add ONE line: "Changed X to Y"
 
 OUTPUT CONSISTENCY:
 - Always use the FILE: filename format for code changes
-- Include complete files, not snippets (unless specifically asked)
+- Include complete files, not snippets
+- The output must be valid HTML that can be saved directly
 - Preserve file structure and formatting conventions
 `;

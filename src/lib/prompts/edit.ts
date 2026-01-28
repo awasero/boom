@@ -46,16 +46,27 @@ When outputting the modified file, you MUST:
 - NEVER replace complex class lists with simpler ones
 - NEVER restructure HTML that wasn't mentioned in the request
 
-## OUTPUT FORMAT
+## OUTPUT FORMAT — CRITICAL
 
-For changes, output the complete modified file(s):
+**DO NOT explain what you're about to do. DO NOT show snippets. DO NOT describe changes.**
 
-FILE: filename.html
+Just output the complete file immediately:
+
+FILE: index.html
 \`\`\`html
-(complete file with ONLY the requested changes - everything else IDENTICAL to original)
+<!DOCTYPE html>
+<html>
+... (THE ENTIRE FILE from <!DOCTYPE> to </html>) ...
+</html>
 \`\`\`
 
-For clarification questions, respond conversationally without code blocks.
+RULES:
+1. Start your response with "FILE:" immediately — no preamble
+2. Output the COMPLETE file from first line to last line
+3. The file must be valid HTML that can be saved and opened
+4. After the code block, you may add a ONE LINE summary of what changed
+
+ONLY ask a clarification question if you genuinely cannot determine what to change.
 
 ${GLOBAL_RULES}`;
 
@@ -133,15 +144,27 @@ Before outputting, verify:
 - [ ] All attributes unchanged (data-*, aria-*, id, etc.)
 - [ ] Only the requested change was made
 
-## OUTPUT FORMAT
+## OUTPUT FORMAT — CRITICAL
 
-FILE: filename.html
+**DO NOT explain what you're about to do. DO NOT show snippets. DO NOT describe changes.**
+
+Just output the complete file immediately:
+
+FILE: index.html
 \`\`\`html
-(complete file - the targeted element modified, EVERYTHING else identical)
+<!DOCTYPE html>
+<html>
+... (THE ENTIRE FILE from <!DOCTYPE> to </html>) ...
+</html>
 \`\`\`
 
-If you cannot locate the element:
-"I couldn't find an element matching {{selector}}. Can you click on the element again or describe where it is?"
+RULES:
+1. Start your response with "FILE:" immediately — no preamble
+2. Output the COMPLETE file from first line to last line
+3. The file must be valid HTML that can be saved and opened
+4. After the code block, you may add a ONE LINE summary: "Changed X to Y"
+
+If you cannot locate the element, ONLY then ask: "I couldn't find that element. Can you click on it again?"
 
 ${GLOBAL_RULES}`;
 
