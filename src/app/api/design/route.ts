@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       projectName,
       targetSection,
       designSystem,
+      conversationHistory,
       apiKey: userApiKey,
     } = await request.json();
 
@@ -59,11 +60,24 @@ export async function POST(request: NextRequest) {
       prompt
     );
 
+    // Build messages array with conversation history for context
+    const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+    if (conversationHistory && Array.isArray(conversationHistory)) {
+      for (const msg of conversationHistory) {
+        if (msg.role === "user" || msg.role === "assistant") {
+          messages.push({ role: msg.role, content: msg.content });
+        }
+      }
+    }
+
+    messages.push({ role: "user", content: prompt });
+
     const stream = await client.messages.stream({
       model: "claude-sonnet-4-20250514",
       max_tokens: 8192,
       system: systemPrompt,
-      messages: [{ role: "user", content: prompt }],
+      messages,
     });
 
     // Create a streaming response

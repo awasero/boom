@@ -550,6 +550,12 @@ export function BuilderWorkspace({
 
       console.log(`Routed to ${model} (${endpoint}, ${maxTokens} tokens): ${routingReason}`);
 
+      // Build conversation history for context (last 10 messages max to avoid token limits)
+      const recentMessages = messages.slice(-10).map(msg => ({
+        role: msg.role as "user" | "assistant",
+        content: msg.content,
+      }));
+
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -562,6 +568,7 @@ export function BuilderWorkspace({
           command,
           designContext,
           maxTokens,
+          conversationHistory: recentMessages,
           elementContext: selectedElement ? {
             selector: selectedElement.selector,
             section: selectedElement.section,

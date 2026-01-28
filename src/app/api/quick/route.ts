@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
       elementContext,
       designSystem,
       maxTokens: requestedMaxTokens,
+      conversationHistory,
       apiKey: userApiKey,
     } = await request.json();
 
@@ -119,11 +120,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build messages array with conversation history for context
+    const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+    if (conversationHistory && Array.isArray(conversationHistory)) {
+      for (const msg of conversationHistory) {
+        if (msg.role === "user" || msg.role === "assistant") {
+          messages.push({ role: msg.role, content: msg.content });
+        }
+      }
+    }
+
+    messages.push({ role: "user", content: prompt });
+
     const stream = await client.messages.stream({
       model: "claude-3-5-haiku-20241022",
       max_tokens: maxTokens,
       system: systemPrompt,
-      messages: [{ role: "user", content: prompt }],
+      messages,
     });
 
     // Create a streaming response

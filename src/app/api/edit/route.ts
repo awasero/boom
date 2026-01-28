@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       projectName,
       elementContext,
       maxTokens: requestedMaxTokens,
+      conversationHistory,
       apiKey: userApiKey,
     } = await request.json();
 
@@ -75,11 +76,26 @@ export async function POST(request: NextRequest) {
     // This is higher than Haiku's limit because Sonnet handles structural changes
     const maxTokens = Math.min(requestedMaxTokens || 8192, 16384);
 
+    // Build messages array with conversation history for context
+    const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+    // Add recent conversation history if available (for follow-up responses like "yes")
+    if (conversationHistory && Array.isArray(conversationHistory)) {
+      for (const msg of conversationHistory) {
+        if (msg.role === "user" || msg.role === "assistant") {
+          messages.push({ role: msg.role, content: msg.content });
+        }
+      }
+    }
+
+    // Add the current prompt
+    messages.push({ role: "user", content: prompt });
+
     const stream = await client.messages.stream({
       model: "claude-sonnet-4-20250514",
       max_tokens: maxTokens,
       system: systemPrompt,
-      messages: [{ role: "user", content: prompt }],
+      messages,
     });
 
     // Create a streaming response
