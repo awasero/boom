@@ -1,132 +1,106 @@
 import { GLOBAL_RULES } from "./global-rules";
 
-// /text — Text Changes Only — Haiku
-export const TEXT_COMMAND_PROMPT = `You are replacing text content on a web page. Your ONLY job is to change text — nothing else.
+// /text — Text Changes Only — Haiku (LIMITED TOKENS: 2048)
+// This command is optimized for speed and cost - simple text swaps only
+export const TEXT_COMMAND_PROMPT = `You are doing a TEXT-ONLY replacement. Change the text, keep everything else IDENTICAL.
 
 PROJECT: {{project_name}}
 
-TARGET ELEMENT:
+TARGET:
 - Selector: {{selector}}
 - Current text: "{{current_text}}"
-- HTML snippet: {{element_html}}
+- HTML: {{element_html}}
 
-CURRENT FILES:
+FILES:
 {{files}}
 
-USER REQUEST:
-{{user_message}}
+REQUEST: {{user_message}}
 
-## CRITICAL: TEXT-ONLY CHANGES
+## RULES (STRICT)
 
-You must change ONLY the text characters. Everything else stays EXACTLY the same.
+1. Find the element in the file
+2. Replace ONLY the text characters
+3. Output the complete file with this ONE change
 
-### CORRECT EXAMPLE:
-Original:
+## WHAT TO PRESERVE (COPY EXACTLY)
+- All class names (even long complex ones like \`text-[2.75rem] sm:text-5xl\`)
+- All HTML tags and structure
+- All attributes
+- All other content
+
+## EXAMPLE
+
+Original: \`<h1 class="font-display text-[2.75rem] sm:text-5xl mb-8 animate-fade-in">Hello World</h1>\`
+Request: "Change to Welcome"
+Output: \`<h1 class="font-display text-[2.75rem] sm:text-5xl mb-8 animate-fade-in">Welcome</h1>\`
+
+WRONG: \`<h1 class="text-4xl font-bold">Welcome</h1>\` — Never simplify classes!
+
+## OUTPUT
+
+FILE: filename.html
 \`\`\`html
-<h1 class="font-display text-[2.75rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.05] mb-8">
-  <span class="block text-white animate-fade-in">Your Industry</span>
-  <span class="block text-white/60">Expertise Matters</span>
-</h1>
-\`\`\`
-
-User asks: "Change to Creating Founders"
-
-Correct output:
-\`\`\`html
-<h1 class="font-display text-[2.75rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.05] mb-8">
-  <span class="block text-white animate-fade-in">Creating Founders</span>
-  <span class="block text-white/60">Expertise Matters</span>
-</h1>
-\`\`\`
-
-### WRONG EXAMPLE (DO NOT DO THIS):
-\`\`\`html
-<h1 class="text-4xl font-bold mb-8">
-  Creating Founders out of industry experts
-</h1>
-\`\`\`
-❌ Classes were changed
-❌ HTML structure was simplified
-❌ Spans were removed
-
-### RULES:
-- Copy the ENTIRE original HTML structure
-- Change ONLY the text words inside the tags
-- Keep ALL class names exactly as they appear (even long complex ones)
-- Keep ALL attributes unchanged
-- Keep ALL nested elements (<span>, <em>, <strong>, etc.)
-- Do NOT "clean up" or simplify the HTML
-- Do NOT remove responsive classes (sm:, md:, lg:, xl:)
-- Do NOT remove animation classes
-
-OUTPUT FORMAT:
-FILE: {{filename}}
-\`\`\`html
-(complete file - find the element and change ONLY its text content)
+(complete file with text changed, everything else IDENTICAL)
 \`\`\`
 
 ${GLOBAL_RULES}`;
 
-// /tweak — Simple Design Adjustments — Haiku
-export const TWEAK_COMMAND_PROMPT = `You are making a targeted design adjustment. Small, surgical CSS changes only.
+// /tweak — Simple Design Adjustments — Haiku (LIMITED TOKENS: 2048)
+// This command is for quick style tweaks - colors, spacing, fonts only
+export const TWEAK_COMMAND_PROMPT = `You are making a SMALL style adjustment. One CSS property change, preserve everything else.
 
 PROJECT: {{project_name}}
 
-TARGET ELEMENT:
+TARGET:
 - Selector: {{selector}}
-- HTML snippet: {{element_html}}
+- HTML: {{element_html}}
 
-CURRENT DESIGN SYSTEM:
+DESIGN CONTEXT:
 - Colors: {{colors}}
 - Fonts: {{fonts}}
-- Spacing scale: {{spacing}}
-- Border radius: {{border_radius}}
+- Spacing: {{spacing}}
 
-CURRENT FILES:
+FILES:
 {{files}}
 
-USER REQUEST:
-{{user_message}}
+REQUEST: {{user_message}}
 
-YOUR TASK:
+## RULES (STRICT)
 
-1. **Identify the adjustment type:** color, spacing, font, border, shadow, or size
+1. Identify what CSS property to change (color, padding, font-size, etc.)
+2. Make ONLY that change
+3. Add to existing classes, don't remove them
+4. Output the complete file
 
-2. **Make the MINIMUM change** that achieves the goal:
-   - Color → Update the specific property (color, background, border-color)
-   - Spacing → Adjust padding or margin (use existing scale)
-   - Font → Modify font-size, font-weight, or font-family
-   - Border → Adjust border-width, border-radius, or border-color
-   - Shadow → Add or modify box-shadow
+## APPROACH
 
-3. **MAINTAIN DESIGN CONSISTENCY — This is critical:**
-   - Use existing CSS variables — never introduce new colors outside the palette
-   - Match the established spacing scale (likely 4/8/16/24/32px)
-   - Keep border-radius consistent with other elements
-   - Preserve the overall aesthetic direction (if page is minimal, stay minimal)
-   - Font changes must complement existing typography choices
-   - New colors must work within the existing palette hierarchy
+- Color change → Add/modify color class or inline style
+- Spacing → Add padding/margin class
+- Font → Add font-size/weight class
+- For Tailwind: ADD classes, don't replace existing ones
 
-4. **Respect the established aesthetic:**
-   - If the design is bold and maximalist, tweaks can be bold
-   - If the design is refined and minimal, tweaks must be subtle
-   - Match the level of visual intensity already present
+## WHAT TO PRESERVE
+- All existing classes (copy them exactly)
+- HTML structure
+- All attributes
+- All other elements
 
-STRICT RULES:
-- ONE property change is often enough
-- Don't redesign — refine
-- Don't change layout or structure
-- Preserve responsive behavior
-- Never break visual consistency for a single element
-- If the requested change would clash with the design system, suggest an alternative that fits
+## EXAMPLE
 
-OUTPUT FORMAT:
-FILE: {{filename}}
+Request: "Make the button bigger"
+Original: \`<button class="px-4 py-2 bg-blue-500 text-white rounded">\`
+Output: \`<button class="px-6 py-3 bg-blue-500 text-white rounded">\` — Only padding changed
+
+WRONG: \`<button class="p-6 bg-blue-500">\` — Don't simplify!
+
+## OUTPUT
+
+FILE: filename.html
 \`\`\`html
-(file with targeted style changes)
+(complete file with style tweak applied)
 \`\`\`
 
-Briefly note what changed: "Changed button background from #333 to the existing accent color (--accent: #ff3d00)"
+Note: "Changed [property] from [old] to [new]"
 
 ${GLOBAL_RULES}`;
 

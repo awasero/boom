@@ -6,11 +6,6 @@ import {
   buildEditElementPrompt,
   ElementContext,
 } from "@/lib/prompts/edit";
-import {
-  buildTextCommandPrompt,
-  buildTweakCommandPrompt,
-  DesignSystem,
-} from "@/lib/prompts/commands";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -26,25 +21,10 @@ export async function POST(request: NextRequest) {
       prompt,
       existingFiles,
       projectName,
-      command,
       elementContext,
-      designSystem,
       maxTokens: requestedMaxTokens,
       apiKey: userApiKey,
     } = await request.json();
-
-    // Token limits for Haiku - keep it constrained for simple tasks
-    // /text and /tweak should be surgical, not full rewrites
-    const TOKEN_LIMITS: Record<string, number> = {
-      text: 2048,    // Text changes only - very limited
-      tweak: 2048,   // Style tweaks - limited
-      default: 4096, // General quick edits - moderate
-    };
-
-    const maxTokens = Math.min(
-      requestedMaxTokens || TOKEN_LIMITS.default,
-      command ? (TOKEN_LIMITS[command] || TOKEN_LIMITS.default) : TOKEN_LIMITS.default
-    );
 
     const effectiveApiKey = userApiKey || apiKey;
     if (!effectiveApiKey) {
@@ -64,39 +44,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build the appropriate prompt based on command and context
+    // Build the appropriate prompt based on context
     let systemPrompt: string;
 
-    if (command === "text" && elementContext) {
-      // /text command - text changes only
-      systemPrompt = buildTextCommandPrompt(
-        projectName || "Untitled Project",
-        elementContext.selector || "",
-        elementContext.text || "",
-        elementContext.html || "",
-        filesString,
-        prompt
-      );
-    } else if (command === "tweak" && elementContext) {
-      // /tweak command - simple design adjustments
-      const ds: DesignSystem = designSystem || {
-        colors: "Not extracted",
-        fonts: "Not extracted",
-        spacing: "Not extracted",
-        borderRadius: "Not extracted",
-        aesthetic: "Not extracted",
-        texturesShadowsEffects: "Not extracted",
-      };
-      systemPrompt = buildTweakCommandPrompt(
-        projectName || "Untitled Project",
-        elementContext.selector || "",
-        elementContext.html || "",
-        ds,
-        filesString,
-        prompt
-      );
-    } else if (elementContext && elementContext.selector) {
-      // Element-targeted edit (no specific command)
+    if (elementContext && elementContext.selector) {
+      // Element-targeted edit
       const element: ElementContext = {
         selector: elementContext.selector || "",
         section: elementContext.section || "unknown",
@@ -111,7 +63,7 @@ export async function POST(request: NextRequest) {
         prompt
       );
     } else {
-      // General edit (no element selected)
+      // General edit
       systemPrompt = buildEditGeneralPrompt(
         projectName || "Untitled Project",
         filesString,
@@ -119,8 +71,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Sonnet for quality edits - default to 8192 tokens
+    // This is higher than Haiku's limit because Sonnet handles structural changes
+    const maxTokens = Math.min(requestedMaxTokens || 8192, 16384);
+
     const stream = await client.messages.stream({
-      model: "claude-3-5-haiku-20241022",
+      model: "claude-sonnet-4-20250514",
       max_tokens: maxTokens,
       system: systemPrompt,
       messages: [{ role: "user", content: prompt }],
@@ -145,7 +101,7 @@ export async function POST(request: NextRequest) {
           controller.close();
         } catch (error: unknown) {
           console.error("Stream error:", error);
-          let errorMessage = "Request failed";
+          let errorMessage = "Edit failed";
           if (error && typeof error === 'object' && 'message' in error) {
             errorMessage = String((error as { message: string }).message);
           }
@@ -166,9 +122,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Quick request error:", error);
+    console.error("Edit request error:", error);
     return NextResponse.json(
-      { error: "Failed to process request" },
+      { error: "Failed to process edit request" },
       { status: 500 }
     );
   }

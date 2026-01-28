@@ -48,35 +48,42 @@ export async function POST(request: NextRequest) {
     }
 
     // If a command is explicitly used, route directly
+    // ONLY /text and /tweak use Haiku (simple, token-limited tasks)
+    // All other commands use Sonnet for better quality
     if (command) {
       const commandRoutes: Record<
         string,
-        { classification: string; model: string; endpoint: string }
+        { classification: string; model: string; endpoint: string; maxTokens: number }
       > = {
         text: {
           classification: "text_change",
           model: "haiku",
           endpoint: "/api/quick",
+          maxTokens: 2048, // Limited - text changes only
         },
         tweak: {
           classification: "tweak",
           model: "haiku",
           endpoint: "/api/quick",
+          maxTokens: 2048, // Limited - style tweaks only
         },
         seo: {
           classification: "seo",
           model: "sonnet",
           endpoint: "/api/seo",
+          maxTokens: 8192,
         },
         mobile: {
           classification: "mobile",
           model: "sonnet",
           endpoint: "/api/mobile",
+          maxTokens: 8192,
         },
         design: {
           classification: "design",
           model: "sonnet",
           endpoint: "/api/design",
+          maxTokens: 8192,
         },
       };
 
@@ -92,11 +99,13 @@ export async function POST(request: NextRequest) {
 
     const effectiveApiKey = userApiKey || apiKey;
     if (!effectiveApiKey) {
-      // Default to haiku for edits if no API key for routing
+      // Default to Sonnet for edits if no API key for routing
+      // Sonnet provides better quality for structural changes
       return NextResponse.json({
         classification: hasElement ? "edit_element" : "edit_general",
-        model: "haiku",
-        endpoint: "/api/quick",
+        model: "sonnet",
+        endpoint: "/api/edit",
+        maxTokens: 8192,
         confidence: 0.7,
         reasoning: "Default routing without API key",
       });
@@ -139,33 +148,44 @@ export async function POST(request: NextRequest) {
         const parsed: RouterResponse = JSON.parse(jsonText);
 
         // Map classification to model and endpoint
+        // Strategy: Haiku ONLY for explicit simple commands (text_change, tweak)
+        // Sonnet for all structural edits to preserve code quality
+        // Opus for initial builds (no token limit)
         const routeMap: Record<
           string,
-          { model: string; endpoint: string }
+          { model: string; endpoint: string; maxTokens: number }
         > = {
-          initial_build_design: { model: "opus", endpoint: "/api/generate" },
-          initial_build_performance: { model: "opus", endpoint: "/api/generate" },
-          edit_general: { model: "haiku", endpoint: "/api/quick" },
-          edit_element: { model: "haiku", endpoint: "/api/quick" },
-          text_change: { model: "haiku", endpoint: "/api/quick" },
-          tweak: { model: "haiku", endpoint: "/api/quick" },
-          seo: { model: "sonnet", endpoint: "/api/seo" },
-          mobile: { model: "sonnet", endpoint: "/api/mobile" },
-          design: { model: "sonnet", endpoint: "/api/design" },
-          question: { model: "haiku", endpoint: "/api/quick" },
-          prohibited: { model: "haiku", endpoint: "/api/quick" },
-          unclear: { model: "haiku", endpoint: "/api/quick" },
+          // Initial builds - Opus with high token limit
+          initial_build_design: { model: "opus", endpoint: "/api/generate", maxTokens: 16384 },
+          initial_build_performance: { model: "opus", endpoint: "/api/generate", maxTokens: 16384 },
+          // General edits - Sonnet for quality (structural changes need intelligence)
+          edit_general: { model: "sonnet", endpoint: "/api/edit", maxTokens: 8192 },
+          edit_element: { model: "sonnet", endpoint: "/api/edit", maxTokens: 8192 },
+          // Simple changes - Haiku with LIMITED tokens (only via explicit commands)
+          text_change: { model: "haiku", endpoint: "/api/quick", maxTokens: 2048 },
+          tweak: { model: "haiku", endpoint: "/api/quick", maxTokens: 2048 },
+          // Specialized commands - Sonnet
+          seo: { model: "sonnet", endpoint: "/api/seo", maxTokens: 8192 },
+          mobile: { model: "sonnet", endpoint: "/api/mobile", maxTokens: 8192 },
+          design: { model: "sonnet", endpoint: "/api/design", maxTokens: 8192 },
+          // Questions and edge cases - Sonnet for better understanding
+          question: { model: "sonnet", endpoint: "/api/edit", maxTokens: 4096 },
+          prohibited: { model: "sonnet", endpoint: "/api/edit", maxTokens: 1024 },
+          unclear: { model: "sonnet", endpoint: "/api/edit", maxTokens: 4096 },
         };
 
+        // Default to Sonnet for unknown classifications
         const route = routeMap[parsed.classification] || {
-          model: "haiku",
-          endpoint: "/api/quick",
+          model: "sonnet",
+          endpoint: "/api/edit",
+          maxTokens: 8192,
         };
 
         return NextResponse.json({
           classification: parsed.classification,
           model: route.model,
           endpoint: route.endpoint,
+          maxTokens: route.maxTokens,
           confidence: parsed.confidence,
           reasoning: parsed.reasoning,
           needsClarification: parsed.needs_clarification,
@@ -174,33 +194,37 @@ export async function POST(request: NextRequest) {
           scope: parsed.scope,
         });
       } catch {
-        // If parsing fails, default based on element selection
+        // If parsing fails, use Sonnet for quality - don't downgrade to Haiku
         return NextResponse.json({
           classification: hasElement ? "edit_element" : "edit_general",
-          model: "haiku",
-          endpoint: "/api/quick",
+          model: "sonnet",
+          endpoint: "/api/edit",
+          maxTokens: 8192,
           confidence: 0.5,
-          reasoning: "Router parsing fallback",
+          reasoning: "Router parsing fallback - using Sonnet for quality",
         });
       }
     }
 
+    // Default fallback - use Sonnet for structural integrity
     return NextResponse.json({
       classification: hasElement ? "edit_element" : "edit_general",
-      model: "haiku",
-      endpoint: "/api/quick",
+      model: "sonnet",
+      endpoint: "/api/edit",
+      maxTokens: 8192,
       confidence: 0.5,
-      reasoning: "Router fallback",
+      reasoning: "Router fallback - using Sonnet",
     });
   } catch (error) {
     console.error("Router error:", error);
-    // On error, default to haiku for edits
+    // On error, use Sonnet - never downgrade to Haiku for unknown edits
     return NextResponse.json({
       classification: "edit_general",
-      model: "haiku",
-      endpoint: "/api/quick",
+      model: "sonnet",
+      endpoint: "/api/edit",
+      maxTokens: 8192,
       confidence: 0.3,
-      reasoning: "Router error fallback",
+      reasoning: "Router error fallback - using Sonnet for safety",
     });
   }
 }

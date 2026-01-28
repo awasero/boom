@@ -466,10 +466,12 @@ export function BuilderWorkspace({
     setStreamingContent("");
     setError(null);
 
-    // Determine model and endpoint - default to Haiku for quick edits
-    let model: ModelType = "haiku";
-    let endpoint = "/api/quick";
+    // Determine model and endpoint
+    // Default to Sonnet for quality - Haiku only for explicit /text and /tweak commands
+    let model: ModelType = "sonnet";
+    let endpoint = "/api/edit";
     let routingReason = "";
+    let maxTokens = 8192;
 
     // Get API key from localStorage
     const apiKey = getAnthropicApiKey();
@@ -481,29 +483,37 @@ export function BuilderWorkspace({
 
     try {
       // If command is specified, use predetermined routing
+      // ONLY /text and /tweak use Haiku with limited tokens
       if (command === "text") {
         model = "haiku";
         endpoint = "/api/quick";
+        maxTokens = 2048; // Limited for text-only changes
         content = `Update the text/copy: ${content}`;
-        routingReason = "Text changes";
+        routingReason = "Text changes (Haiku - limited)";
       } else if (command === "tweak") {
         model = "haiku";
         endpoint = "/api/quick";
+        maxTokens = 2048; // Limited for style tweaks
         content = `Make this design adjustment: ${content}`;
-        routingReason = "Quick tweak";
+        routingReason = "Quick tweak (Haiku - limited)";
       } else if (command === "seo") {
         model = "sonnet";
-        endpoint = "/api/optimize";
+        endpoint = "/api/seo";
+        maxTokens = 8192;
         routingReason = "SEO optimization";
       } else if (command === "mobile") {
-        model = "opus";
-        content = `Mobile-first redesign: ${content}`;
-        routingReason = "Mobile redesign";
+        model = "sonnet";
+        endpoint = "/api/mobile";
+        maxTokens = 8192;
+        routingReason = "Mobile optimization";
       } else if (command === "design") {
-        model = "opus";
-        routingReason = "Design mode";
+        model = "sonnet";
+        endpoint = "/api/design";
+        maxTokens = 8192;
+        routingReason = "Design enhancement";
       } else {
-        // Use Haiku to route the request
+        // Use router to classify the request
+        // Router will use Sonnet for classification and route appropriately
         try {
           const routeResponse = await fetch("/api/route-request", {
             method: "POST",
@@ -511,6 +521,12 @@ export function BuilderWorkspace({
             body: JSON.stringify({
               prompt: content,
               hasExistingFiles: files.length > 0,
+              hasElement: !!selectedElement,
+              elementInfo: selectedElement ? {
+                selector: selectedElement.selector,
+                section: selectedElement.section,
+                text: selectedElement.text,
+              } : null,
               apiKey,
             }),
           });
@@ -518,22 +534,21 @@ export function BuilderWorkspace({
           if (routeResponse.ok) {
             const routeData = await routeResponse.json();
             model = routeData.model as ModelType;
-            routingReason = routeData.reason || "";
-
-            // Set endpoint based on routed model
-            if (model === "sonnet") {
-              endpoint = "/api/optimize";
-            } else if (model === "haiku") {
-              endpoint = "/api/quick";
-            }
+            endpoint = routeData.endpoint || "/api/edit";
+            maxTokens = routeData.maxTokens || 8192;
+            routingReason = routeData.reasoning || "";
           }
         } catch (routeError) {
-          console.log("Router fallback to opus:", routeError);
-          // Default to opus on routing error
+          console.log("Router error, using Sonnet fallback:", routeError);
+          // Default to Sonnet on routing error - never downgrade to Haiku
+          model = "sonnet";
+          endpoint = "/api/edit";
+          maxTokens = 8192;
+          routingReason = "Fallback to Sonnet";
         }
       }
 
-      console.log(`Routed to ${model}: ${routingReason}`);
+      console.log(`Routed to ${model} (${endpoint}, ${maxTokens} tokens): ${routingReason}`);
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -546,6 +561,14 @@ export function BuilderWorkspace({
           buildMode: projectConfig?.buildMode || "design",
           command,
           designContext,
+          maxTokens,
+          elementContext: selectedElement ? {
+            selector: selectedElement.selector,
+            section: selectedElement.section,
+            parent: selectedElement.parent,
+            text: selectedElement.text,
+            html: selectedElement.html,
+          } : null,
           apiKey,
         }),
       });
