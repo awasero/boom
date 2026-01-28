@@ -176,18 +176,6 @@ export function ChatPanel({
     }
   }, [selectedElement]);
 
-  function formatElementContext(ctx: ElementContext): string {
-    // Build a rich context string for the AI
-    let context = `[Element: ${ctx.selector}`;
-    if (ctx.section) context += ` in ${ctx.section}`;
-    if (ctx.parent && ctx.parent !== ctx.section) context += ` (parent: ${ctx.parent})`;
-    context += `]\n`;
-    if (ctx.text) context += `Text content: "${ctx.text.slice(0, 80)}${ctx.text.length > 80 ? '...' : ''}"\n`;
-    if (ctx.html) context += `HTML snippet:\n\`\`\`html\n${ctx.html}\n\`\`\`\n`;
-    context += `IMPORTANT: Only modify this specific element. Do not change any other parts of the page.\n`;
-    return context;
-  }
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (input.trim() && !isGenerating) {
@@ -198,20 +186,16 @@ export function ChatPanel({
         const cmdArgs = cmdMatch[2] || "";
         const command = COMMANDS.find(c => c.name === cmdName);
         if (command) {
-          const messageWithElement = selectedElement
-            ? `${formatElementContext(selectedElement)}${cmdArgs || `Run ${command.name} optimization`}`
-            : (cmdArgs || `Run ${command.name} optimization`);
-          onSendMessage(messageWithElement, cmdName);
+          // Send only the user's input - element context is passed separately via selectedElement prop
+          const displayMessage = cmdArgs || `Run ${command.name} optimization`;
+          onSendMessage(displayMessage, cmdName);
           setInput("");
           onClearSelectedElement?.();
           return;
         }
       }
-      // Include selected element context if present
-      const messageWithElement = selectedElement
-        ? `${formatElementContext(selectedElement)}${input.trim()}`
-        : input.trim();
-      onSendMessage(messageWithElement);
+      // Send only the user's actual input - element context handled by builder-workspace
+      onSendMessage(input.trim());
       setInput("");
       onClearSelectedElement?.();
     }

@@ -452,11 +452,19 @@ export function BuilderWorkspace({
       }
     }
 
-    // Add message to chat first
+    // Add message to chat - show clean user input with optional element indicator
+    // The technical context (HTML, selectors) is passed separately to the API
+    let displayContent = command ? `/${command} ${content}` : content;
+
+    // Add a subtle element indicator if an element is targeted (not the full HTML dump)
+    if (selectedElement) {
+      displayContent = `[→ ${selectedElement.selector}] ${displayContent}`;
+    }
+
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: command ? `/${command} ${content}` : content,
+      content: displayContent,
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
