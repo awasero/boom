@@ -1,63 +1,58 @@
 import { GLOBAL_RULES } from "./global-rules";
 
 // /text — Text Changes Only — Haiku (LIMITED TOKENS: 2048)
-// This command is optimized for speed and cost - simple text swaps only
-export const TEXT_COMMAND_PROMPT = `You are doing a TEXT-ONLY replacement. Change the text, keep everything else IDENTICAL.
+// Uses PATCH approach - model outputs find/replace, client applies it
+export const TEXT_COMMAND_PROMPT = `You are doing a simple text replacement. Output a PATCH that the system will apply.
 
-PROJECT: {{project_name}}
-
-TARGET:
+TARGET ELEMENT:
 - Selector: {{selector}}
 - Current text: "{{current_text}}"
 - HTML: {{element_html}}
 
-FILES:
-{{files}}
-
 REQUEST: {{user_message}}
 
-## RULES (STRICT)
+## YOUR TASK
 
-1. Find the element in the file
-2. Replace ONLY the text characters
-3. Output the complete file with this ONE change
+1. Look at the target element HTML
+2. Create a PATCH that changes ONLY the text
+3. Keep ALL classes, tags, and attributes EXACTLY the same
 
-## WHAT TO PRESERVE (COPY EXACTLY)
-- All class names (even long complex ones like \`text-[2.75rem] sm:text-5xl\`)
-- All HTML tags and structure
-- All attributes
-- All other content
+## OUTPUT FORMAT (STRICT)
+
+You MUST output in this exact format:
+
+PATCH:
+\`\`\`
+FIND:
+<the exact original HTML line or element>
+REPLACE:
+<the same HTML with only the text changed>
+\`\`\`
 
 ## EXAMPLE
 
-Original: \`<h1 class="font-display text-[2.75rem] sm:text-5xl mb-8 animate-fade-in">Hello World</h1>\`
-Request: "Change to Welcome"
-Output: \`<h1 class="font-display text-[2.75rem] sm:text-5xl mb-8 animate-fade-in">Welcome</h1>\`
+Target: \`<span class="block text-white animate-fade-in">Flows</span>\`
+Request: "change to Works"
 
-WRONG: \`<h1 class="text-4xl font-bold">Welcome</h1>\` — Never simplify classes!
-
-## OUTPUT — CRITICAL
-
-**NO PREAMBLE. NO EXPLANATION. Just output the file:**
-
-FILE: index.html
-\`\`\`html
-<!DOCTYPE html>
-... (COMPLETE FILE) ...
-</html>
+PATCH:
+\`\`\`
+FIND:
+<span class="block text-white animate-fade-in">Flows</span>
+REPLACE:
+<span class="block text-white animate-fade-in">Works</span>
 \`\`\`
 
-Changed "old text" to "new text".
-
-${GLOBAL_RULES}`;
+## RULES
+- The FIND must match the original EXACTLY (copy it precisely)
+- The REPLACE must be identical except for the text change
+- NEVER change classes, attributes, or structure
+- Output ONLY the PATCH block - nothing else`;
 
 // /tweak — Simple Design Adjustments — Haiku (LIMITED TOKENS: 2048)
-// This command is for quick style tweaks - colors, spacing, fonts only
-export const TWEAK_COMMAND_PROMPT = `You are making a SMALL style adjustment. One CSS property change, preserve everything else.
+// Uses PATCH approach - model outputs find/replace, client applies it
+export const TWEAK_COMMAND_PROMPT = `You are making a simple style adjustment. Output a PATCH that the system will apply.
 
-PROJECT: {{project_name}}
-
-TARGET:
+TARGET ELEMENT:
 - Selector: {{selector}}
 - HTML: {{element_html}}
 
@@ -66,53 +61,57 @@ DESIGN CONTEXT:
 - Fonts: {{fonts}}
 - Spacing: {{spacing}}
 
-FILES:
-{{files}}
-
 REQUEST: {{user_message}}
 
-## RULES (STRICT)
+## YOUR TASK
 
-1. Identify what CSS property to change (color, padding, font-size, etc.)
-2. Make ONLY that change
-3. Add to existing classes, don't remove them
-4. Output the complete file
+1. Look at the target element HTML
+2. Create a PATCH that adds/modifies the style
+3. Keep ALL existing classes and attributes
 
-## APPROACH
+## OUTPUT FORMAT (STRICT)
 
-- Color change → Add/modify color class or inline style
-- Spacing → Add padding/margin class
-- Font → Add font-size/weight class
-- For Tailwind: ADD classes, don't replace existing ones
+You MUST output in this exact format:
 
-## WHAT TO PRESERVE
-- All existing classes (copy them exactly)
-- HTML structure
-- All attributes
-- All other elements
-
-## EXAMPLE
-
-Request: "Make the button bigger"
-Original: \`<button class="px-4 py-2 bg-blue-500 text-white rounded">\`
-Output: \`<button class="px-6 py-3 bg-blue-500 text-white rounded">\` — Only padding changed
-
-WRONG: \`<button class="p-6 bg-blue-500">\` — Don't simplify!
-
-## OUTPUT — CRITICAL
-
-**NO PREAMBLE. NO EXPLANATION. Just output the file:**
-
-FILE: index.html
-\`\`\`html
-<!DOCTYPE html>
-... (COMPLETE FILE) ...
-</html>
+PATCH:
+\`\`\`
+FIND:
+<the exact original HTML element>
+REPLACE:
+<the element with style change applied>
 \`\`\`
 
-Changed [property] from [old] to [new].
+## EXAMPLES
 
-${GLOBAL_RULES}`;
+**Color change:**
+Target: \`<button class="px-4 py-2 bg-blue-500 text-white">Click</button>\`
+Request: "make it red"
+
+PATCH:
+\`\`\`
+FIND:
+<button class="px-4 py-2 bg-blue-500 text-white">Click</button>
+REPLACE:
+<button class="px-4 py-2 bg-red-500 text-white">Click</button>
+\`\`\`
+
+**Size change:**
+Target: \`<button class="px-4 py-2 bg-blue-500">Click</button>\`
+Request: "make it bigger"
+
+PATCH:
+\`\`\`
+FIND:
+<button class="px-4 py-2 bg-blue-500">Click</button>
+REPLACE:
+<button class="px-6 py-3 bg-blue-500">Click</button>
+\`\`\`
+
+## RULES
+- The FIND must match the original EXACTLY
+- Keep ALL existing classes - only modify the relevant ones
+- NEVER remove classes
+- Output ONLY the PATCH block - nothing else`;
 
 // /seo — SEO Optimization — Sonnet
 export const SEO_COMMAND_PROMPT = `You are an SEO specialist optimizing a web page for search visibility.
@@ -420,39 +419,36 @@ export interface DesignSystem {
 
 // Builder functions
 export function buildTextCommandPrompt(
-  projectName: string,
+  _projectName: string,
   selector: string,
   currentText: string,
   elementHtml: string,
-  files: string,
+  _files: string,
   userMessage: string
 ): string {
+  // PATCH-based approach - doesn't need full files, just the element
   return TEXT_COMMAND_PROMPT
-    .replace("{{project_name}}", projectName)
     .replace("{{selector}}", selector)
     .replace("{{current_text}}", currentText)
     .replace("{{element_html}}", elementHtml)
-    .replace("{{files}}", files)
     .replace("{{user_message}}", userMessage);
 }
 
 export function buildTweakCommandPrompt(
-  projectName: string,
+  _projectName: string,
   selector: string,
   elementHtml: string,
   designSystem: DesignSystem,
-  files: string,
+  _files: string,
   userMessage: string
 ): string {
+  // PATCH-based approach - doesn't need full files, just the element
   return TWEAK_COMMAND_PROMPT
-    .replace("{{project_name}}", projectName)
     .replace("{{selector}}", selector)
     .replace("{{element_html}}", elementHtml)
     .replace("{{colors}}", designSystem.colors || "Not extracted")
     .replace("{{fonts}}", designSystem.fonts || "Not extracted")
     .replace("{{spacing}}", designSystem.spacing || "Not extracted")
-    .replace("{{border_radius}}", designSystem.borderRadius || "Not extracted")
-    .replace("{{files}}", files)
     .replace("{{user_message}}", userMessage);
 }
 
