@@ -7,7 +7,8 @@
 - **Database:** Supabase (PostgreSQL + RLS)
 - **Styling:** Tailwind CSS + shadcn/ui (new-york)
 - **AI:** Anthropic Claude API (Opus/Sonnet/Haiku routing)
-- **Deployment:** Cloudflare Pages (Direct Upload API)
+- **Hosting:** Vercel (Boom app itself)
+- **User Site Deploys:** Cloudflare Pages (Direct Upload API)
 - **Version Control:** GitHub (Octokit)
 
 ## Commands
