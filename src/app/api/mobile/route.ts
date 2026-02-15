@@ -1,111 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { auth } from "@/lib/auth";
-import { buildMobileCommandPrompt, DesignSystem } from "@/lib/prompts/commands";
+import { createClient } from "@/lib/supabase/server";
+import { buildMobileCommandPrompt, DesignSystem } from "@/lib/ai/prompts/commands";
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const {
-      prompt,
-      existingFiles,
-      projectName,
-      targetSection,
-      designSystem,
-      conversationHistory,
-      apiKey: userApiKey,
-    } = await request.json();
+    const { prompt, existingFiles, projectName, designSystem, conversationHistory } = await request.json();
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return NextResponse.json({ error: "API key not configured" }, { status: 500 });
 
-    const effectiveApiKey = userApiKey || apiKey;
-    if (!effectiveApiKey) {
-      return NextResponse.json(
-        { error: "API key required. Please add your Anthropic API key in Settings." },
-        { status: 400 }
-      );
-    }
-
-    const client = new Anthropic({ apiKey: effectiveApiKey });
-
-    // Build files string for the prompt
+    const client = new Anthropic({ apiKey });
     let filesString = "";
-    if (existingFiles && existingFiles.length > 0) {
+    if (existingFiles?.length > 0) {
       for (const file of existingFiles) {
         filesString += `\nFILE: ${file.path}\n\`\`\`\n${file.content}\n\`\`\`\n`;
       }
     }
 
-    // Default design system if not provided
     const ds: DesignSystem = designSystem || {
-      colors: "Not extracted",
-      fonts: "Not extracted",
-      spacing: "Not extracted",
-      borderRadius: "Not extracted",
-      aesthetic: "Not extracted",
-      texturesShadowsEffects: "Not extracted",
+      colors: "Not extracted", fonts: "Not extracted", spacing: "Not extracted",
+      borderRadius: "Not extracted", aesthetic: "Not extracted", texturesShadowsEffects: "Not extracted",
     };
-
-    // Build the mobile optimization prompt
-    const systemPrompt = buildMobileCommandPrompt(
-      projectName || "Untitled Project",
-      targetSection || "entire page",
-      ds,
-      filesString,
-      prompt
-    );
-
-    // Build messages array with conversation history for context
+    const systemPrompt = buildMobileCommandPrompt(projectName || "Untitled", "entire page", ds, filesString, prompt);
     const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
-
-    if (conversationHistory && Array.isArray(conversationHistory)) {
+    if (conversationHistory?.length) {
       for (const msg of conversationHistory) {
-        if (msg.role === "user" || msg.role === "assistant") {
-          messages.push({ role: msg.role, content: msg.content });
-        }
+        if (msg.role === "user" || msg.role === "assistant") messages.push({ role: msg.role, content: msg.content });
       }
     }
-
     messages.push({ role: "user", content: prompt });
 
     const stream = await client.messages.stream({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 8192,
-      system: systemPrompt,
-      messages,
+      model: "claude-sonnet-4-20250514", max_tokens: 8192, system: systemPrompt, messages,
     });
 
-    // Create a streaming response
     const encoder = new TextEncoder();
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
           for await (const event of stream) {
-            if (
-              event.type === "content_block_delta" &&
-              event.delta.type === "text_delta"
-            ) {
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
-              );
+            if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`));
             }
           }
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
         } catch (error: unknown) {
-          console.error("Stream error:", error);
-          let errorMessage = "Mobile optimization failed";
-          if (error && typeof error === "object" && "message" in error) {
-            errorMessage = String((error as { message: string }).message);
-          }
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`)
-          );
+          const msg = error instanceof Error ? error.message : "Mobile optimization failed";
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`));
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
         }
@@ -113,17 +59,10 @@ export async function POST(request: NextRequest) {
     });
 
     return new Response(readableStream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
+      headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
     });
   } catch (error) {
-    console.error("Mobile request error:", error);
-    return NextResponse.json(
-      { error: "Failed to process mobile optimization request" },
-      { status: 500 }
-    );
+    console.error("Mobile error:", error);
+    return NextResponse.json({ error: "Failed to process mobile request" }, { status: 500 });
   }
 }

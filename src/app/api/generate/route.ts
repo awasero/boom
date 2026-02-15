@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { auth } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import {
   buildInitialDesignPrompt,
   buildInitialPerformancePrompt,
-} from "@/lib/prompts/initial-build";
+} from "@/lib/ai/prompts/initial-build";
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
 
   try {
     const {
@@ -23,20 +22,18 @@ export async function POST(request: NextRequest) {
       projectName,
       buildMode,
       designContext,
-      apiKey: userApiKey,
     } = await request.json();
 
-    const effectiveApiKey = userApiKey || apiKey;
-    if (!effectiveApiKey) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
       return NextResponse.json(
-        { error: "API key required. Please add your Anthropic API key in Settings." },
-        { status: 400 }
+        { error: "API key not configured" },
+        { status: 500 }
       );
     }
 
-    const client = new Anthropic({ apiKey: effectiveApiKey });
+    const client = new Anthropic({ apiKey });
 
-    // Build the appropriate prompt based on build mode
     let systemPrompt: string;
     if (buildMode === "performance") {
       systemPrompt = buildInitialPerformancePrompt(
@@ -53,53 +50,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Add existing files for reference if making edits (shouldn't happen in generate, but just in case)
     if (existingFiles && existingFiles.length > 0) {
       systemPrompt += "\n\n## Current Project Files\n";
-      systemPrompt +=
-        "These are the existing files in the project. Reference them when making changes.\n";
       for (const file of existingFiles) {
         systemPrompt += `\nFILE: ${file.path}\n\`\`\`\n${file.content}\n\`\`\`\n`;
       }
     }
 
-    let stream;
-    try {
-      stream = await client.messages.stream({
-        model: "claude-opus-4-20250514",
-        max_tokens: 16384,
-        system: systemPrompt,
-        messages: [{ role: "user", content: prompt }],
-      });
-    } catch (apiError: unknown) {
-      console.error("Claude API error:", apiError);
+    const stream = await client.messages.stream({
+      model: "claude-opus-4-20250514",
+      max_tokens: 16384,
+      system: systemPrompt,
+      messages: [{ role: "user", content: prompt }],
+    });
 
-      // Handle specific API errors
-      if (apiError && typeof apiError === 'object' && 'status' in apiError) {
-        const status = (apiError as { status: number }).status;
-        const message = (apiError as { message?: string }).message || '';
-
-        if (status === 400 && message.includes('credit balance')) {
-          return NextResponse.json(
-            { error: "API credits exhausted. Please add credits to continue." },
-            { status: 402 }
-          );
-        }
-        if (status === 401) {
-          return NextResponse.json(
-            { error: "Invalid API key." },
-            { status: 401 }
-          );
-        }
-      }
-
-      return NextResponse.json(
-        { error: "Failed to connect to AI service." },
-        { status: 500 }
-      );
-    }
-
-    // Create a streaming response
     const encoder = new TextEncoder();
     const readableStream = new ReadableStream({
       async start(controller) {
@@ -117,21 +81,9 @@ export async function POST(request: NextRequest) {
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
         } catch (error: unknown) {
-          console.error("Stream error:", error);
-
-          // Send error message through the stream
-          let errorMessage = "Generation failed";
-          if (error && typeof error === 'object' && 'message' in error) {
-            const msg = String((error as { message: string }).message);
-            if (msg.includes('credit balance')) {
-              errorMessage = "API credits exhausted. Please add credits to continue.";
-            } else {
-              errorMessage = msg;
-            }
-          }
-
+          const msg = error instanceof Error ? error.message : "Generation failed";
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`)
+            encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`)
           );
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
@@ -148,9 +100,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Generation error:", error);
-    return NextResponse.json(
-      { error: "Failed to generate" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate" }, { status: 500 });
   }
 }

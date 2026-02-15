@@ -1,42 +1,27 @@
+export type ProjectType = "website" | "deck";
 export type BuildMode = "design" | "performance";
-
-export interface VibesitesConfig {
-  version: string;
-  createdAt: string;
-  name: string;
-  description?: string;
-  template: "landing" | "portfolio" | "blog" | "custom";
-  buildMode?: BuildMode;
-  projectContext?: string;
-  deployment?: {
-    cloudflareProjectName?: string;
-    customDomain?: string;
-    lastDeployedAt?: string;
-  };
-  cms?: {
-    enabled: boolean;
-    collections?: string[];
-  };
-}
+export type ModelType = "opus" | "sonnet" | "haiku";
 
 export interface Project {
-  id: number;
+  id: string;
+  user_id: string;
   name: string;
-  fullName: string;
   description: string | null;
-  htmlUrl: string;
-  defaultBranch: string;
-  updatedAt: string;
-  isVibesitesProject: boolean;
-  config?: VibesitesConfig;
+  type: ProjectType;
+  github_repo: string;
+  github_owner: string;
+  brand_nucleus: BrandNucleus | null;
+  cloudflare_project_id: string | null;
+  deploy_url: string | null;
+  deploy_status: "idle" | "building" | "deployed" | "failed";
+  created_at: string;
+  updated_at: string;
 }
 
 export interface GeneratedFile {
   path: string;
   content: string;
 }
-
-export type ModelType = "opus" | "sonnet" | "haiku";
 
 export interface ChatMessage {
   id: string;
@@ -45,45 +30,56 @@ export interface ChatMessage {
   files?: GeneratedFile[];
   timestamp: Date;
   model?: ModelType;
-  command?: string; // e.g., "/seo", "/mobile"
-  routingReason?: string; // Why this model was selected
+  command?: string;
+  routingReason?: string;
 }
 
-// Design reference presets
+export interface BrandNucleus {
+  colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    background: string;
+    surface: string;
+    text: { primary: string; secondary: string; inverse: string };
+  };
+  typography: {
+    heading: { family: string; weights: string[] };
+    body: { family: string; weights: string[] };
+  };
+  spacing: { unit: number; scale: number[] };
+  borderRadius: { sm: string; md: string; lg: string };
+  voice: { tone: string; personality: string[] };
+}
+
+export interface ElementContext {
+  selector: string;
+  parent: string;
+  section: string;
+  text: string;
+  html: string;
+}
+
 export interface DesignPreset {
   id: string;
   name: string;
   description: string;
-  style: string; // CSS-like description for the AI
+  style: string;
   icon: string;
 }
 
-// Design reference (URL to analyze)
-export interface DesignReference {
-  type: "url" | "preset";
-  value: string; // URL or preset ID
-  presetData?: DesignPreset;
-}
-
-// Design references for a message
-export interface DesignReferences {
-  urls: string[];
-  presets: string[]; // Preset IDs
-}
-
-// Plugin/Command definition
 export interface ChatCommand {
-  name: string; // e.g., "seo", "mobile"
+  name: string;
   description: string;
-  model: ModelType; // Which model to use
-  icon: string; // Icon name
+  model: ModelType;
+  icon: string;
 }
 
-// Element context for targeted edits
-export interface ElementContext {
-  selector: string; // CSS selector (tag#id.class)
-  parent: string; // Parent element selector
-  section: string; // Containing section/landmark
-  text: string; // Text content (truncated)
-  html: string; // Outer HTML (truncated)
+export interface DesignSystem {
+  colors: string;
+  fonts: string;
+  spacing: string;
+  borderRadius: string;
+  aesthetic: string;
+  texturesShadowsEffects: string;
 }

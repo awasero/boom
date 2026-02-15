@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { auth } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import {
   buildEditGeneralPrompt,
   buildEditElementPrompt,
   ElementContext,
-} from "@/lib/prompts/edit";
+} from "@/lib/ai/prompts/edit";
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
 
   try {
     const {
@@ -24,20 +23,15 @@ export async function POST(request: NextRequest) {
       elementContext,
       maxTokens: requestedMaxTokens,
       conversationHistory,
-      apiKey: userApiKey,
     } = await request.json();
 
-    const effectiveApiKey = userApiKey || apiKey;
-    if (!effectiveApiKey) {
-      return NextResponse.json(
-        { error: "API key required. Please add your Anthropic API key in Settings." },
-        { status: 400 }
-      );
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "API key not configured" }, { status: 500 });
     }
 
-    const client = new Anthropic({ apiKey: effectiveApiKey });
+    const client = new Anthropic({ apiKey });
 
-    // Build files string for prompts
     let filesString = "";
     if (existingFiles && existingFiles.length > 0) {
       for (const file of existingFiles) {
@@ -45,11 +39,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build the appropriate prompt based on context
     let systemPrompt: string;
-
     if (elementContext && elementContext.selector) {
-      // Element-targeted edit
       const element: ElementContext = {
         selector: elementContext.selector || "",
         section: elementContext.section || "unknown",
@@ -57,29 +48,14 @@ export async function POST(request: NextRequest) {
         textContent: elementContext.text || "",
         elementHtml: elementContext.html || "",
       };
-      systemPrompt = buildEditElementPrompt(
-        projectName || "Untitled Project",
-        element,
-        filesString,
-        prompt
-      );
+      systemPrompt = buildEditElementPrompt(projectName || "Untitled", element, filesString, prompt);
     } else {
-      // General edit
-      systemPrompt = buildEditGeneralPrompt(
-        projectName || "Untitled Project",
-        filesString,
-        prompt
-      );
+      systemPrompt = buildEditGeneralPrompt(projectName || "Untitled", filesString, prompt);
     }
 
-    // Sonnet for quality edits - default to 8192 tokens
-    // This is higher than Haiku's limit because Sonnet handles structural changes
     const maxTokens = Math.min(requestedMaxTokens || 8192, 16384);
 
-    // Build messages array with conversation history for context
     const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
-
-    // Add recent conversation history if available (for follow-up responses like "yes")
     if (conversationHistory && Array.isArray(conversationHistory)) {
       for (const msg of conversationHistory) {
         if (msg.role === "user" || msg.role === "assistant") {
@@ -87,8 +63,6 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-
-    // Add the current prompt
     messages.push({ role: "user", content: prompt });
 
     const stream = await client.messages.stream({
@@ -98,32 +72,20 @@ export async function POST(request: NextRequest) {
       messages,
     });
 
-    // Create a streaming response
     const encoder = new TextEncoder();
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
           for await (const event of stream) {
-            if (
-              event.type === "content_block_delta" &&
-              event.delta.type === "text_delta"
-            ) {
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
-              );
+            if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`));
             }
           }
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
         } catch (error: unknown) {
-          console.error("Stream error:", error);
-          let errorMessage = "Edit failed";
-          if (error && typeof error === 'object' && 'message' in error) {
-            errorMessage = String((error as { message: string }).message);
-          }
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`)
-          );
+          const msg = error instanceof Error ? error.message : "Edit failed";
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`));
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
         }
@@ -131,17 +93,10 @@ export async function POST(request: NextRequest) {
     });
 
     return new Response(readableStream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
+      headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
     });
   } catch (error) {
-    console.error("Edit request error:", error);
-    return NextResponse.json(
-      { error: "Failed to process edit request" },
-      { status: 500 }
-    );
+    console.error("Edit error:", error);
+    return NextResponse.json({ error: "Failed to edit" }, { status: 500 });
   }
 }

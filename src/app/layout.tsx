@@ -1,22 +1,21 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { SessionProvider } from "@/components/providers/session-provider";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
 });
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
-  title: "boom.git - Free AI Website Builder",
-  description: "Build websites with words, not code. 100% free AI website builder. Describe what you want, watch it build, deploy to GitHub Pages for free.",
+  title: "Boom — AI Website & Deck Builder",
+  description:
+    "Build websites and decks with AI. Describe what you want, watch it build, deploy instantly.",
 };
 
 export default function RootLayout({
@@ -25,11 +24,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
-        <SessionProvider>{children}</SessionProvider>
+        {children}
       </body>
     </html>
   );
