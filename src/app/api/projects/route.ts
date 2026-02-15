@@ -4,7 +4,6 @@ import { createGitHubClient } from "@/lib/github/client";
 import { createRepo } from "@/lib/github/repos";
 import { ensureStagingBranch } from "@/lib/github/branches";
 import { saveProjectConfig } from "@/lib/github/config";
-import type { ProjectType } from "@/types/project";
 
 export async function GET() {
   const supabase = await createClient();
@@ -41,23 +40,15 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, description, type } = body as {
+    const { name, description } = body as {
       name: string;
       description?: string;
-      type: ProjectType;
     };
 
     // Validate required fields
     if (!name || !name.trim()) {
       return NextResponse.json(
         { error: "Project name is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!type || !["website", "deck"].includes(type)) {
-      return NextResponse.json(
-        { error: "Invalid project type" },
         { status: 400 }
       );
     }
@@ -92,7 +83,6 @@ export async function POST(request: NextRequest) {
     // Save .boom/config.json
     await saveProjectConfig(octokit, profile.github_username, repo.name, {
       name: name.trim(),
-      type,
       version: "1.0.0",
       createdAt: new Date().toISOString(),
     });
@@ -104,7 +94,6 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         name: name.trim(),
         description: description?.trim() || null,
-        type,
         github_repo: repo.name,
         github_owner: profile.github_username,
       })

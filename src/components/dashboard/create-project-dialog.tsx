@@ -14,9 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Globe, Presentation } from "lucide-react";
-import type { ProjectType } from "@/types/project";
+import { Loader2 } from "lucide-react";
 
 interface CreateProjectDialogProps {
   children: React.ReactNode;
@@ -27,14 +25,12 @@ export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<ProjectType>("website");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const resetForm = () => {
     setName("");
     setDescription("");
-    setType("website");
     setError(null);
     setLoading(false);
   };
@@ -64,7 +60,6 @@ export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || undefined,
-          type,
         }),
       });
 
@@ -94,7 +89,7 @@ export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
               Create New Project
             </DialogTitle>
             <DialogDescription>
-              Set up a new project with a GitHub repository.
+              Each project includes a website and can have multiple decks.
             </DialogDescription>
           </DialogHeader>
 
@@ -123,33 +118,6 @@ export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={loading}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Type</Label>
-              <Tabs
-                value={type}
-                onValueChange={(value) => setType(value as ProjectType)}
-              >
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger
-                    value="website"
-                    disabled={loading}
-                    className="data-[state=active]:bg-violet-600 data-[state=active]:text-white"
-                  >
-                    <Globe className="mr-2 h-4 w-4" />
-                    Website
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="deck"
-                    disabled={loading}
-                    className="data-[state=active]:bg-violet-600 data-[state=active]:text-white"
-                  >
-                    <Presentation className="mr-2 h-4 w-4" />
-                    Deck
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
             </div>
 
             {error && (

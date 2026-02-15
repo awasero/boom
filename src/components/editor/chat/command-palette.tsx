@@ -7,6 +7,13 @@ import {
   Search,
   Smartphone,
   Palette,
+  Rocket,
+  FilePlus,
+  Presentation,
+  Sparkles,
+  Eye,
+  Download,
+  SwatchBook,
 } from "lucide-react";
 import type { ChatCommand, ModelType } from "@/types/project";
 
@@ -22,6 +29,13 @@ const COMMANDS: ChatCommand[] = [
   { name: "seo", description: "SEO optimization", model: "sonnet", icon: "Search" },
   { name: "mobile", description: "Mobile responsive", model: "sonnet", icon: "Smartphone" },
   { name: "design", description: "Design system update", model: "sonnet", icon: "Palette" },
+  { name: "publish", description: "Deploy to Cloudflare", model: "haiku", icon: "Rocket" },
+  { name: "new-page", description: "Add a website page", model: "opus", icon: "FilePlus" },
+  { name: "new-deck", description: "Create a new deck", model: "opus", icon: "Presentation" },
+  { name: "brand", description: "Edit brand nucleus", model: "sonnet", icon: "Sparkles" },
+  { name: "deploy-preview", description: "Preview deploy", model: "haiku", icon: "Eye" },
+  { name: "export", description: "Export project files", model: "haiku", icon: "Download" },
+  { name: "theme", description: "Modify theme/style", model: "sonnet", icon: "SwatchBook" },
 ];
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -30,6 +44,13 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Search,
   Smartphone,
   Palette,
+  Rocket,
+  FilePlus,
+  Presentation,
+  Sparkles,
+  Eye,
+  Download,
+  SwatchBook,
 };
 
 const MODEL_COLORS: Record<ModelType, string> = {
@@ -37,6 +58,9 @@ const MODEL_COLORS: Record<ModelType, string> = {
   sonnet: "bg-blue-500/20 text-blue-300",
   haiku: "bg-emerald-500/20 text-emerald-300",
 };
+
+// Action commands don't use an AI model - hide the badge
+const ACTION_COMMANDS = new Set(["publish", "deploy-preview", "export"]);
 
 export function CommandPalette({
   onCommandSelect,
@@ -82,9 +106,10 @@ export function CommandPalette({
           Commands
         </span>
       </div>
-      <div className="py-1">
+      <div className="py-1 max-h-[320px] overflow-y-auto">
         {filteredCommands.map((cmd) => {
           const Icon = ICON_MAP[cmd.icon];
+          const isAction = ACTION_COMMANDS.has(cmd.name);
           return (
             <button
               key={cmd.name}
@@ -99,11 +124,18 @@ export function CommandPalette({
                   <span className="text-sm font-medium text-foreground">
                     /{cmd.name}
                   </span>
-                  <span
-                    className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${MODEL_COLORS[cmd.model]}`}
-                  >
-                    {cmd.model}
-                  </span>
+                  {!isAction && (
+                    <span
+                      className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${MODEL_COLORS[cmd.model]}`}
+                    >
+                      {cmd.model}
+                    </span>
+                  )}
+                  {isAction && (
+                    <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-zinc-500/20 text-zinc-300">
+                      action
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground truncate">
                   {cmd.description}

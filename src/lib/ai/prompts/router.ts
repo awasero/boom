@@ -17,9 +17,13 @@ CLASSIFY INTO ONE:
 7. "seo" — /seo command or meta/schema request
 8. "mobile" — /mobile command or mobile-specific redesign
 9. "design" — /design command or creative redesign
-10. "question" — User asking about the code
-11. "prohibited" — Illegal/harmful content
-12. "unclear" — Need more context
+10. "new_page" — /new-page command or request to add a page to the website
+11. "new_deck" — /new-deck command or request to create a presentation
+12. "brand_edit" — /brand command or request to update brand identity
+13. "theme_change" — /theme command or request to change visual theme/style
+14. "question" — User asking about the code
+15. "prohibited" — Illegal/harmful content
+16. "unclear" — Need more context
 
 RESPOND WITH JSON ONLY:
 {

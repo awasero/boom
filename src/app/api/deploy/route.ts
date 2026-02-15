@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createGitHubClient } from "@/lib/github/client";
 import { getProjectFiles } from "@/lib/github/files";
+import { listDecks } from "@/lib/github/decks";
 import { createPagesProject, deployProject } from "@/lib/cloudflare/pages";
+import { renderDeckToHtml } from "@/lib/deck-renderer";
+import { BrandNucleus } from "@/types/project";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -15,7 +18,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { projectId } = await request.json();
+    const { projectId, preview } = await request.json();
 
     if (!projectId) {
       return NextResponse.json(
@@ -54,10 +57,28 @@ export async function POST(request: NextRequest) {
     );
 
     // Map to the format Cloudflare expects
-    const deployFiles = files.map((f) => ({
-      path: f.path,
-      content: f.content,
-    }));
+    const deployFiles = files
+      .filter((f) => !f.path.startsWith("boom-decks/") && !f.path.startsWith(".boom/"))
+      .map((f) => ({
+        path: f.path,
+        content: f.content,
+      }));
+
+    // Render decks to HTML and add to deploy files
+    const brand = project.brand_nucleus as BrandNucleus | null;
+    const decks = await listDecks(
+      octokit,
+      project.github_owner,
+      project.github_repo
+    );
+
+    for (const deck of decks) {
+      const deckHtml = renderDeckToHtml(deck, brand);
+      deployFiles.push({
+        path: `boom-decks/${deck.slug}/index.html`,
+        content: deckHtml,
+      });
+    }
 
     // Create Pages project if it doesn't exist
     let cloudflareProjectName = project.cloudflare_project_id;
@@ -73,10 +94,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Deploy via Direct Upload
+    const branch = preview ? "preview" : "main";
     const deployment = await deployProject(
       cloudflareProjectName,
       deployFiles,
-      "main"
+      branch
     );
 
     // Update project record with deploy info
@@ -93,6 +115,8 @@ export async function POST(request: NextRequest) {
       deploymentId: deployment.id,
       url: deployment.url,
       status: deployment.latest_stage.status,
+      preview: !!preview,
+      deckCount: decks.length,
     });
   } catch (error) {
     console.error("Deploy error:", error);

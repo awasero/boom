@@ -1,0 +1,2 @@
+ALTER TABLE public.projects ALTER COLUMN type DROP NOT NULL;
+ALTER TABLE public.projects ALTER COLUMN type SET DEFAULT NULL;

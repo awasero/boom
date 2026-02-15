@@ -5,6 +5,8 @@ import {
   buildInitialDesignPrompt,
   buildInitialPerformancePrompt,
 } from "@/lib/ai/prompts/initial-build";
+import { injectBrandContext } from "@/lib/brand/inject";
+import { BrandNucleus } from "@/types/project";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -22,6 +24,7 @@ export async function POST(request: NextRequest) {
       projectName,
       buildMode,
       designContext,
+      brandNucleus,
     } = await request.json();
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -48,6 +51,10 @@ export async function POST(request: NextRequest) {
         designContext || "None specified",
         prompt
       );
+    }
+
+    if (brandNucleus) {
+      systemPrompt = injectBrandContext(brandNucleus as BrandNucleus) + "\n\n" + systemPrompt;
     }
 
     if (existingFiles && existingFiles.length > 0) {

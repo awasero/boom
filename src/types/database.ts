@@ -31,7 +31,6 @@ export interface Database {
           user_id: string;
           name: string;
           description: string | null;
-          type: "website" | "deck";
           github_repo: string;
           github_owner: string;
           brand_nucleus: Record<string, unknown> | null;
@@ -46,7 +45,6 @@ export interface Database {
           user_id: string;
           name: string;
           description?: string | null;
-          type?: "website" | "deck";
           github_repo: string;
           github_owner: string;
           brand_nucleus?: Record<string, unknown> | null;
@@ -57,7 +55,6 @@ export interface Database {
         Update: {
           name?: string;
           description?: string | null;
-          type?: "website" | "deck";
           brand_nucleus?: Record<string, unknown> | null;
           cloudflare_project_id?: string | null;
           deploy_url?: string | null;

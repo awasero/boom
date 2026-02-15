@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { buildEditGeneralPrompt, buildEditElementPrompt, ElementContext } from "@/lib/ai/prompts/edit";
 import { buildTextCommandPrompt, buildTweakCommandPrompt, DesignSystem } from "@/lib/ai/prompts/commands";
 import { parsePatchAndApply } from "@/lib/ai/parser";
+import { injectBrandContext } from "@/lib/brand/inject";
+import { BrandNucleus } from "@/types/project";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -17,6 +19,7 @@ export async function POST(request: NextRequest) {
     const {
       prompt, existingFiles, projectName, command, elementContext,
       designSystem, maxTokens: requestedMaxTokens, conversationHistory,
+      brandNucleus,
     } = await request.json();
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -60,6 +63,10 @@ export async function POST(request: NextRequest) {
       systemPrompt = buildEditElementPrompt(projectName || "Untitled", element, filesString, prompt);
     } else {
       systemPrompt = buildEditGeneralPrompt(projectName || "Untitled", filesString, prompt);
+    }
+
+    if (brandNucleus) {
+      systemPrompt = injectBrandContext(brandNucleus as BrandNucleus) + "\n\n" + systemPrompt;
     }
 
     const messages: Array<{ role: "user" | "assistant"; content: string }> = [];

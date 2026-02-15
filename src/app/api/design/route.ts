@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { buildDesignCommandPrompt, DesignSystem } from "@/lib/ai/prompts/commands";
+import { injectBrandContext } from "@/lib/brand/inject";
+import { BrandNucleus } from "@/types/project";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -9,7 +11,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { prompt, existingFiles, projectName, designSystem, conversationHistory } = await request.json();
+    const { prompt, existingFiles, projectName, designSystem, conversationHistory, brandNucleus } = await request.json();
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "API key not configured" }, { status: 500 });
 
@@ -25,7 +27,10 @@ export async function POST(request: NextRequest) {
       colors: "Not extracted", fonts: "Not extracted", spacing: "Not extracted",
       borderRadius: "Not extracted", aesthetic: "Not extracted", texturesShadowsEffects: "Not extracted",
     };
-    const systemPrompt = buildDesignCommandPrompt(projectName || "Untitled", "entire page", ds, filesString, prompt);
+    let systemPrompt = buildDesignCommandPrompt(projectName || "Untitled", "entire page", ds, filesString, prompt);
+    if (brandNucleus) {
+      systemPrompt = injectBrandContext(brandNucleus as BrandNucleus) + "\n\n" + systemPrompt;
+    }
     const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
     if (conversationHistory?.length) {
       for (const msg of conversationHistory) {

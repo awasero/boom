@@ -6,6 +6,8 @@ import {
   buildEditElementPrompt,
   ElementContext,
 } from "@/lib/ai/prompts/edit";
+import { injectBrandContext } from "@/lib/brand/inject";
+import { BrandNucleus } from "@/types/project";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -23,6 +25,7 @@ export async function POST(request: NextRequest) {
       elementContext,
       maxTokens: requestedMaxTokens,
       conversationHistory,
+      brandNucleus,
     } = await request.json();
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -51,6 +54,10 @@ export async function POST(request: NextRequest) {
       systemPrompt = buildEditElementPrompt(projectName || "Untitled", element, filesString, prompt);
     } else {
       systemPrompt = buildEditGeneralPrompt(projectName || "Untitled", filesString, prompt);
+    }
+
+    if (brandNucleus) {
+      systemPrompt = injectBrandContext(brandNucleus as BrandNucleus) + "\n\n" + systemPrompt;
     }
 
     const maxTokens = Math.min(requestedMaxTokens || 8192, 16384);

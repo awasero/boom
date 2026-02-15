@@ -4,7 +4,6 @@ import { commitFiles } from "./files";
 
 export interface BoomConfig {
   name: string;
-  type: "website" | "deck";
   version: string;
   createdAt: string;
 }

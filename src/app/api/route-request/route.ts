@@ -34,6 +34,10 @@ export async function POST(request: NextRequest) {
         seo: { classification: "seo", model: "sonnet", endpoint: "/api/seo", maxTokens: 8192 },
         mobile: { classification: "mobile", model: "sonnet", endpoint: "/api/mobile", maxTokens: 8192 },
         design: { classification: "design", model: "sonnet", endpoint: "/api/design", maxTokens: 8192 },
+        "new-page": { classification: "new_page", model: "opus", endpoint: "/api/generate", maxTokens: 16384 },
+        "new-deck": { classification: "new_deck", model: "opus", endpoint: "/api/generate", maxTokens: 16384 },
+        brand: { classification: "brand_edit", model: "sonnet", endpoint: "/api/brand/extract", maxTokens: 4096 },
+        theme: { classification: "theme_change", model: "sonnet", endpoint: "/api/design", maxTokens: 8192 },
       };
       const route = routes[command];
       if (route) {
@@ -78,6 +82,10 @@ export async function POST(request: NextRequest) {
           seo: { model: "sonnet", endpoint: "/api/seo", maxTokens: 8192 },
           mobile: { model: "sonnet", endpoint: "/api/mobile", maxTokens: 8192 },
           design: { model: "sonnet", endpoint: "/api/design", maxTokens: 8192 },
+          new_page: { model: "opus", endpoint: "/api/generate", maxTokens: 16384 },
+          new_deck: { model: "opus", endpoint: "/api/generate", maxTokens: 16384 },
+          brand_edit: { model: "sonnet", endpoint: "/api/brand/extract", maxTokens: 4096 },
+          theme_change: { model: "sonnet", endpoint: "/api/design", maxTokens: 8192 },
           question: { model: "sonnet", endpoint: "/api/edit", maxTokens: 4096 },
           prohibited: { model: "sonnet", endpoint: "/api/edit", maxTokens: 1024 },
           unclear: { model: "sonnet", endpoint: "/api/edit", maxTokens: 4096 },

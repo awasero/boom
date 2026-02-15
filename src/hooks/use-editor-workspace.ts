@@ -5,39 +5,44 @@ import {
   GeneratedFile,
   ChatMessage,
   ElementContext,
-  ProjectType,
+  EditorTab,
+  DeckData,
 } from "@/types/project";
 
 interface WorkspaceState {
-  files: GeneratedFile[];
+  websiteFiles: GeneratedFile[];
   messages: ChatMessage[];
   selectedElement: ElementContext | null;
   activeCommand: string | null;
   currentPage: string;
-  projectType: ProjectType;
+  activeTab: EditorTab;
+  decks: DeckData[];
+  activeDeckId: string | null;
 }
 
-export function useEditorWorkspace(projectType: ProjectType = "website") {
+export function useEditorWorkspace() {
   const [state, setState] = useState<WorkspaceState>({
-    files: [],
+    websiteFiles: [],
     messages: [],
     selectedElement: null,
     activeCommand: null,
     currentPage: "index.html",
-    projectType,
+    activeTab: "website",
+    decks: [],
+    activeDeckId: null,
   });
 
   const setFiles = useCallback((files: GeneratedFile[]) => {
-    setState((prev) => ({ ...prev, files }));
+    setState((prev) => ({ ...prev, websiteFiles: files }));
   }, []);
 
   const updateFiles = useCallback((newFiles: GeneratedFile[]) => {
     setState((prev) => {
-      const fileMap = new Map(prev.files.map((f) => [f.path, f]));
+      const fileMap = new Map(prev.websiteFiles.map((f) => [f.path, f]));
       for (const file of newFiles) {
         fileMap.set(file.path, file);
       }
-      return { ...prev, files: Array.from(fileMap.values()) };
+      return { ...prev, websiteFiles: Array.from(fileMap.values()) };
     });
   }, []);
 
@@ -67,14 +72,51 @@ export function useEditorWorkspace(projectType: ProjectType = "website") {
     setState((prev) => ({ ...prev, currentPage: page }));
   }, []);
 
-  // Build the files string for prompts
+  const setActiveTab = useCallback((tab: EditorTab) => {
+    setState((prev) => ({ ...prev, activeTab: tab }));
+  }, []);
+
+  const addDeck = useCallback((deck: DeckData) => {
+    setState((prev) => ({
+      ...prev,
+      decks: [...prev.decks, deck],
+      activeDeckId: deck.id,
+      activeTab: "decks",
+    }));
+  }, []);
+
+  const updateDeck = useCallback((deck: DeckData) => {
+    setState((prev) => ({
+      ...prev,
+      decks: prev.decks.map((d) => (d.id === deck.id ? deck : d)),
+    }));
+  }, []);
+
+  const deleteDeck = useCallback((deckId: string) => {
+    setState((prev) => ({
+      ...prev,
+      decks: prev.decks.filter((d) => d.id !== deckId),
+      activeDeckId: prev.activeDeckId === deckId ? null : prev.activeDeckId,
+    }));
+  }, []);
+
+  const setActiveDeck = useCallback((deckId: string | null) => {
+    setState((prev) => ({ ...prev, activeDeckId: deckId }));
+  }, []);
+
+  // Build the files string for prompts (website files only for now)
   const getFilesString = useCallback(() => {
     let str = "";
-    for (const file of state.files) {
+    for (const file of state.websiteFiles) {
       str += `\nFILE: ${file.path}\n\`\`\`\n${file.content}\n\`\`\`\n`;
     }
     return str;
-  }, [state.files]);
+  }, [state.websiteFiles]);
+
+  // Get all files for deployment (website + rendered deck HTML)
+  const getAllFilesForDeploy = useCallback(() => {
+    return [...state.websiteFiles];
+  }, [state.websiteFiles]);
 
   // Route a message to the correct API endpoint
   const routeMessage = useCallback(
@@ -84,7 +126,7 @@ export function useEditorWorkspace(projectType: ProjectType = "website") {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          hasExistingFiles: state.files.length > 0,
+          hasExistingFiles: state.websiteFiles.length > 0,
           hasElement: !!state.selectedElement,
           elementInfo: state.selectedElement
             ? JSON.stringify(state.selectedElement)
@@ -103,11 +145,15 @@ export function useEditorWorkspace(projectType: ProjectType = "website") {
 
       return response.json();
     },
-    [state.files, state.selectedElement, state.activeCommand]
+    [state.websiteFiles, state.selectedElement, state.activeCommand]
   );
+
+  // Expose files as alias for backward compat in components
+  const files = state.websiteFiles;
 
   return {
     ...state,
+    files,
     setFiles,
     updateFiles,
     addMessage,
@@ -115,7 +161,13 @@ export function useEditorWorkspace(projectType: ProjectType = "website") {
     setSelectedElement,
     setActiveCommand,
     setCurrentPage,
+    setActiveTab,
+    addDeck,
+    updateDeck,
+    deleteDeck,
+    setActiveDeck,
     getFilesString,
+    getAllFilesForDeploy,
     routeMessage,
   };
 }

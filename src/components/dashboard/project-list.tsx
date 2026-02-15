@@ -24,7 +24,6 @@ import {
   ExternalLink,
   Trash2,
   Globe,
-  Presentation,
   Clock,
   Loader2,
   CheckCircle2,
@@ -125,21 +124,11 @@ export function ProjectList({ projects }: ProjectListProps) {
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
               <div className="flex-1 space-y-1.5">
                 <div className="flex items-center gap-2">
-                  {project.type === "website" ? (
-                    <Globe className="h-4 w-4 text-violet-400" />
-                  ) : (
-                    <Presentation className="h-4 w-4 text-violet-400" />
-                  )}
+                  <Globe className="h-4 w-4 text-violet-400" />
                   <CardTitle className="text-base text-foreground">
                     {project.name}
                   </CardTitle>
                 </div>
-                <Badge
-                  variant="outline"
-                  className="text-xs capitalize text-muted-foreground"
-                >
-                  {project.type}
-                </Badge>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

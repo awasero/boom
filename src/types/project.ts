@@ -1,13 +1,12 @@
-export type ProjectType = "website" | "deck";
 export type BuildMode = "design" | "performance";
 export type ModelType = "opus" | "sonnet" | "haiku";
+export type EditorTab = "website" | "decks";
 
 export interface Project {
   id: string;
   user_id: string;
   name: string;
   description: string | null;
-  type: ProjectType;
   github_repo: string;
   github_owner: string;
   brand_nucleus: BrandNucleus | null;
@@ -16,6 +15,24 @@ export interface Project {
   deploy_status: "idle" | "building" | "deployed" | "failed";
   created_at: string;
   updated_at: string;
+}
+
+export interface DeckSlide {
+  id: string;
+  order: number;
+  title: string;
+  content: string;
+  notes?: string;
+  layout: "title" | "content" | "split" | "image" | "blank";
+}
+
+export interface DeckData {
+  id: string;
+  name: string;
+  slug: string;
+  slides: DeckSlide[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface GeneratedFile {

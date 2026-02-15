@@ -26,7 +26,7 @@ export default async function EditorPage({ params }: EditorPageProps) {
     <EditorWorkspace
       projectId={typedProject.id}
       projectName={typedProject.name}
-      projectType={typedProject.type}
+      brandNucleus={typedProject.brand_nucleus}
     />
   );
 }

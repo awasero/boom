@@ -134,6 +134,42 @@ FILE: {{filename}}
 
 ${GLOBAL_RULES}`;
 
+export const THEME_COMMAND_PROMPT = `You are a theme specialist modifying the visual style of a web page.
+
+PROJECT: {{project_name}}
+
+CURRENT FILES:
+{{files}}
+
+USER REQUEST:
+{{user_message}}
+
+YOUR TASK:
+1. Analyze the current theme/style
+2. Apply the requested theme changes across ALL files
+3. Maintain structural consistency — only change visual properties
+
+Focus on: colors, fonts, gradients, shadows, border-radius, spacing, and overall aesthetic.
+Ensure changes are applied consistently across all pages.
+
+FILE: {{filename}}
+\`\`\`html
+(file with theme changes)
+\`\`\`
+
+${GLOBAL_RULES}`;
+
+export function buildThemeCommandPrompt(
+  projectName: string,
+  files: string,
+  userMessage: string
+): string {
+  return THEME_COMMAND_PROMPT
+    .replace("{{project_name}}", projectName)
+    .replace("{{files}}", files)
+    .replace("{{user_message}}", userMessage);
+}
+
 export interface DesignSystem {
   colors: string;
   fonts: string;

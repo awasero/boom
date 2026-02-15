@@ -31,7 +31,7 @@ export default async function DashboardPage() {
               Projects
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Create and manage your websites and decks.
+              Create and manage your projects.
             </p>
           </div>
           <CreateProjectDialog>
