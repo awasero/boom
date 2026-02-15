@@ -30,8 +30,20 @@ export async function GET(request: Request) {
       }
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error && data.user) {
+      // Sync GitHub username from OAuth metadata
+      const githubUsername =
+        data.user.user_metadata?.user_name ||
+        data.user.user_metadata?.preferred_username;
+
+      if (githubUsername) {
+        await supabase
+          .from("users")
+          .update({ github_username: githubUsername })
+          .eq("id", data.user.id);
+      }
+
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ export function SettingsForm({
   githubUsername,
   hasAnthropicKey,
 }: SettingsFormProps) {
+  const router = useRouter();
   const [anthropicKey, setAnthropicKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -44,6 +46,7 @@ export function SettingsForm({
       if (response.ok) {
         setSaved(true);
         setAnthropicKey("");
+        router.refresh();
         setTimeout(() => setSaved(false), 3000);
       }
     } finally {

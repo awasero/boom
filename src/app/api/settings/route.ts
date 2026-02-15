@@ -16,7 +16,7 @@ export async function PATCH(request: NextRequest) {
     const updates: Record<string, string> = {};
 
     if (body.anthropic_api_key) {
-      updates.anthropic_api_key = body.anthropic_key;
+      updates.anthropic_api_key = body.anthropic_api_key;
     }
 
     if (Object.keys(updates).length === 0) {
